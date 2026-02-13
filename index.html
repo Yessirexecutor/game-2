@@ -2,56 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>THE MASSIVE LOBBY</title>
+    <title>LOBBY_VIBE_FIXED</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #050505; --accent: #00ff41; --panel: rgba(0, 20, 0, 0.95); }
-        body { margin: 0; background: var(--bg); color: var(--accent); font-family: 'Courier New', monospace; overflow: hidden; }
+        :root { --bg: #050510; --accent: #a78bfa; --panel: rgba(20, 20, 40, 0.85); }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        
         #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .login-box { border: 2px solid var(--accent); padding: 30px; text-align: center; background: var(--panel); box-shadow: 0 0 20px var(--accent); }
-        #ui { position: absolute; inset: 0; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .box { pointer-events: all; background: var(--panel); border: 1px solid var(--accent); padding: 15px; border-radius: 4px; }
-        .shop-btn { background: none; border: 1px solid var(--accent); color: var(--accent); cursor: pointer; padding: 5px 10px; margin: 2px; }
-        #chat-input { background: black; border: 1px solid var(--accent); color: var(--accent); padding: 10px; width: 100%; box-sizing: border-box; display: none; }
+        .login-box { background: var(--panel); border: 2px solid var(--accent); padding: 40px; text-align: center; border-radius: 15px; backdrop-filter: blur(15px); }
+        
+        #ui { position: absolute; inset: 0; pointer-events: none; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
+        .box { pointer-events: all; background: var(--panel); border: 1px solid rgba(167, 139, 250, 0.3); padding: 15px; border-radius: 12px; }
+        
+        button { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #chat-input { position: fixed; bottom: 100px; left: 25px; width: 300px; display: none; background: #000; border: 1px solid var(--accent); color: #fff; padding: 12px; }
         #chat-input.active { display: block; }
-        #messages { height: 120px; overflow-y: auto; font-size: 0.8rem; margin-bottom: 5px; }
+        #messages { height: 150px; overflow-y: auto; font-size: 0.9rem; margin-bottom: 10px; }
         canvas { display: block; }
-        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
     <div class="login-box">
-        <h1>LOBBY.EXE ONLINE</h1>
-        <input type="text" id="username-input" placeholder="USERNAME" maxlength="12"><br><br>
-        <button onclick="login()" style="background:#0f0; border:none; padding:15px 30px; cursor:pointer; font-weight:bold">SYNC TO LOBBY</button>
+        <h1 style="color:var(--accent)">VIBE WORLD</h1>
+        <input type="text" id="username-input" placeholder="NAME..." style="padding:10px; border-radius:5px; border:none;"><br><br>
+        <button onclick="login()">SYNC</button>
     </div>
 </div>
 
-<audio id="radio" loop><source src="https://stream.zeno.fm/f3v5u8p74eruv" type="audio/mpeg"></audio>
+<audio id="radio" loop crossorigin="anonymous">
+    <source src="https://stream.zeno.fm/f3v5u8p74eruv" type="audio/mpeg">
+</audio>
+
 <canvas id="canvas"></canvas>
 
 <div id="ui" style="display:none">
     <div style="display: flex; justify-content: space-between;">
-        <div class="box">
-            USER: <span id="display-name">---</span><br>
-            ROOM: <span style="color:#fff">GLOBAL_MAIN</span>
-        </div>
-        <div class="box">
-            <button id="music-btn" onclick="playMusic()" style="background:none; color:#0f0; border:1px solid #0f0; cursor:pointer; padding:10px">🎵 LOFI: OFF</button>
-            <div style="margin-top:10px">
-                SKIN: 
-                <button class="shop-btn" onclick="setSkin('square')">SQRE</button>
-                <button class="shop-btn" onclick="setSkin('circle')">CIRC</button>
-                <button class="shop-btn" onclick="setSkin('ghost')">GHST</button>
-            </div>
-        </div>
+        <div class="box">USER: <b id="display-name" style="color:var(--accent)">---</b></div>
+        <div class="box"><button id="music-btn" onclick="playMusic()">🎵 START LOFI</button></div>
     </div>
-
-    <div class="box" style="width: 350px;">
-        <div id="messages">SYSTEM: PRESS ENTER TO CHAT</div>
-        <input type="text" id="chat-input" placeholder="TYPE...">
+    <div class="box" style="width: 330px;">
+        <div id="messages"></div>
+        <input type="text" id="chat-input">
+        <div style="font-size: 0.7rem; opacity: 0.5;">ENTER TO CHAT</div>
     </div>
 </div>
 
@@ -61,74 +55,56 @@
     const radio = document.getElementById('radio');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-    let myName = localStorage.getItem('username') || "";
-    let mySkin = "square";
-    let myColor = `hsl(${Math.random()*360}, 100%, 50%)`;
-    
-    // THE SECRET SAUCE: Fixed ID for the Lobby Host
-    const LOBBY_ID = "lit-lofi-global-lobby-999"; 
+    let stars = [];
+    for(let i=0; i<200; i++) {
+        stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*2, speed: Math.random()*0.5 });
+    }
+
+    let myName = "";
     let peer = new Peer(); 
     let conns = [];
     let players = {};
-    let myPos = { x: canvas.width/2, y: canvas.height/2, color: myColor, name: myName, skin: mySkin, msg: "" };
+    let myPos = { x: canvas.width/2, y: canvas.height/2, color: '#a78bfa', name: "", msg: "" };
 
     function login() {
-        const val = document.getElementById('username-input').value;
-        if(!val) return;
-        myName = val;
-        localStorage.setItem('username', myName);
+        myName = document.getElementById('username-input').value || "Guest";
         myPos.name = myName;
         document.getElementById('display-name').innerText = myName;
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('ui').style.display = 'flex';
-        
         initNetwork();
     }
 
     function initNetwork() {
-        // First, try to be the Lobby Host
-        const masterPeer = new Peer(LOBBY_ID);
-
-        masterPeer.on('open', () => {
-            console.log("You are the Lobby Host.");
-            setupLobbyHandlers(masterPeer);
-        });
-
-        masterPeer.on('error', (err) => {
-            if (err.type === 'unavailable-id') {
-                // Someone is already the host, so we join them
-                console.log("Lobby exists. Joining...");
-                const clientPeer = new Peer();
-                clientPeer.on('open', () => {
-                    const conn = clientPeer.connect(LOBBY_ID);
-                    setupConn(conn);
-                    conns.push(conn);
-                });
-            }
+        const LOBBY_ID = "lit-global-vibe-999";
+        const master = new Peer(LOBBY_ID);
+        master.on('open', () => { master.on('connection', c => { conns.push(c); setupC(c); }); });
+        master.on('error', () => {
+            const client = new Peer();
+            client.on('open', () => {
+                const c = client.connect(LOBBY_ID);
+                conns.push(c); setupC(c);
+            });
         });
     }
 
-    function setupLobbyHandlers(p) {
-        p.on('connection', conn => {
-            conns.push(conn);
-            setupConn(conn);
-        });
-    }
-
-    function setupConn(c) {
+    function setupC(c) {
         c.on('data', d => {
-            if(d.type === 'sync') players[c.peer || LOBBY_ID] = d.pos;
+            if(d.type === 'sync') players[c.peer || "host"] = d.pos;
             if(d.type === 'chat') addMsg(d.name, d.text);
         });
     }
 
-    function setSkin(s) { myPos.skin = s; }
     function playMusic() {
-        if(radio.paused) { radio.play(); document.getElementById('music-btn').innerText = "🎵 LOFI: ON"; }
-        else { radio.pause(); document.getElementById('music-btn').innerText = "🎵 LOFI: OFF"; }
+        if(radio.paused) {
+            radio.play().catch(() => alert("Click page first!"));
+            document.getElementById('music-btn').innerText = "🎶 VIBING...";
+        } else {
+            radio.pause();
+            document.getElementById('music-btn').innerText = "🎵 START LOFI";
+        }
     }
 
-    // CHAT (ENTER -> TYPE -> ENTER)
     const chatIn = document.getElementById('chat-input');
     let typing = false;
     window.onkeydown = e => {
@@ -148,36 +124,38 @@
     };
 
     function addMsg(u, t) {
-        const m = document.getElementById('messages');
-        m.innerHTML += `<div><b>${u}:</b> ${t}</div>`;
-        m.scrollTop = 999;
+        document.getElementById('messages').innerHTML += `<div><b>${u}:</b> ${t}</div>`;
+        document.getElementById('messages').scrollTop = 999;
     }
 
     const mouse = { x: canvas.width/2, y: canvas.height/2 };
     window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
 
     function loop() {
-        ctx.fillStyle = 'rgba(5, 5, 5, 0.2)';
+        ctx.fillStyle = "#050510";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // MOVING STARS
+        ctx.fillStyle = "#fff";
+        stars.forEach(s => {
+            s.y += s.speed;
+            if(s.y > canvas.height) s.y = 0;
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, 7); ctx.fill();
+        });
+
         myPos.x += (mouse.x - myPos.x) * 0.05;
         myPos.y += (mouse.y - myPos.y) * 0.05;
-        
         conns.forEach(c => c.send({type:'sync', pos: myPos}));
         players['me'] = myPos;
 
         for(let id in players) {
             let p = players[id];
-            ctx.shadowBlur = 15; ctx.shadowColor = p.color;
             ctx.fillStyle = p.color;
-            ctx.strokeStyle = p.color;
-            
-            if(p.skin === 'square') ctx.fillRect(p.x-10, p.y-10, 20, 20);
-            if(p.skin === 'circle') { ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 7); ctx.fill(); }
-            if(p.skin === 'ghost') { ctx.lineWidth = 2; ctx.strokeRect(p.x-12, p.y-12, 24, 24); }
-            
+            ctx.shadowBlur = 15; ctx.shadowColor = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.font = "12px monospace"; ctx.textAlign = "center";
-            ctx.fillText(p.name || "GUEST", p.x, p.y + 30);
+            ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+            ctx.fillText(p.name, p.x, p.y + 30);
             if(p.msg) ctx.fillText(p.msg, p.x, p.y - 30);
         }
         requestAnimationFrame(loop);
