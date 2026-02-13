@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lobby.exe | Identity</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root { --bg: #050505; --accent: #00ff41; --panel: rgba(0, 20, 0, 0.95); }
+        body { margin: 0; background: var(--bg); color: var(--accent); font-family: 'Courier New', monospace; overflow: hidden; }
+        
+        /* Login Screen */
+        #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .login-box { border: 2px solid var(--accent); padding: 30px; text-align: center; background: var(--panel); }
+
+        /* Game UI */
+        #ui { position: absolute; inset: 0; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .box { pointer-events: all; background: var(--panel); border: 1px solid var(--accent); padding: 15px; border-radius: 4px; }
+        
+        /* Cosmetics Shop */
+        .shop-btn { background: none; border: 1px solid var(--accent); color: var(--accent); cursor: pointer; padding: 5px 10px; margin: 2px; font-size: 0.7rem; }
+        .shop-btn:hover { background: var(--accent); color: #000; }
+
+        #chat-input { background: black; border: 1px solid var(--accent); color: var(--accent); padding: 10px; width: 100%; box-sizing: border-box; display: none; margin-top: 10px; }
+        #chat-input.active { display: block; }
+        #messages { height: 100px; overflow-y: auto; font-size: 0.8rem; margin-bottom: 5px; }
+        canvas { display: block; }
+        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>INITIALIZING NEURAL LINK...</h2>
+        <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="12"><br><br>
+        <button onclick="login()" style="background:#0f0; border:none; padding:10px 20px; cursor:pointer; font-weight:bold">ENTER LOBBY</button>
+    </div>
+</div>
+
+<audio id="radio" loop><source src="https://stream.zeno.fm/f3v5u8p74eruv" type="audio/mpeg"></audio>
+
+<canvas id="canvas"></canvas>
+
+<div id="ui" style="display:none">
+    <div style="display: flex; justify-content: space-between;">
+        <div class="box">
+            USER: <span id="display-name">---</span><br>
+            ID: <span id="my-id" style="font-size:0.7rem">...</span><br>
+            <input type="text" id="join-id" placeholder="PASTE ID" style="width:100px">
+            <button onclick="join()" style="background:#0f0; border:none; cursor:pointer">JOIN</button>
+        </div>
+        <div class="box">
+            <button id="music-btn" onclick="playMusic()" style="background:none; color:#0f0; border:1px solid #0f0; cursor:pointer">LOFI: OFF</button>
+            <div style="margin-top:10px">
+                SKIN: 
+                <button class="shop-btn" onclick="setSkin('square')">SQRE</button>
+                <button class="shop-btn" onclick="setSkin('circle')">CIRC</button>
+                <button class="shop-btn" onclick="setSkin('ghost')">GHST</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box" style="width: 300px;">
+        <div id="messages">SYSTEM: PRESS ENTER TO CHAT</div>
+        <input type="text" id="chat-input" placeholder="TYPE...">
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const radio = document.getElementById('radio');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+    let myName = localStorage.getItem('username') || "";
+    let mySkin = "square";
+    let peer = new Peer();
+    let conns = [];
+    let players = {};
+    let myPos = { x: canvas.width/2, y: canvas.height/2, color: '#0f0', name: myName, skin: mySkin, msg: "" };
+
+    // LOGIN LOGIC
+    if(myName) document.getElementById('username-input').value = myName;
+    
+    function login() {
+        const val = document.getElementById('username-input').value;
+        if(!val) return alert("NAME REQUIRED");
+        myName = val;
+        localStorage.setItem('username', myName);
+        myPos.name = myName;
+        document.getElementById('display-name').innerText = myName;
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('ui').style.display = 'flex';
+    }
+
+    function setSkin(s) { myPos.skin = s; }
+
+    peer.on('open', id => { document.getElementById('my-id').innerText = id; });
+    peer.on('connection', c => { conns.push(c); setupC(c); });
+
+    function join() {
+        const c = peer.connect(document.getElementById('join-id').value);
+        conns.push(c); setupC(c);
+    }
+
+    function setupC(c) {
+        c.on('data', d => {
+            if(d.type === 'sync') players[c.peer] = d.pos;
+            if(d.type === 'chat') addMsg(d.name, d.text);
+        });
+    }
+
+    function playMusic() {
+        if(radio.paused) { radio.play(); document.getElementById('music-btn').innerText = "LOFI: ON"; }
+        else { radio.pause(); document.getElementById('music-btn').innerText = "LOFI: OFF"; }
+    }
+
+    const chatIn = document.getElementById('chat-input');
+    let typing = false;
+    window.onkeydown = e => {
+        if(e.key === 'Enter') {
+            if(!typing) { typing = true; chatIn.classList.add('active'); chatIn.focus(); }
+            else {
+                if(chatIn.value.trim()) {
+                    conns.forEach(c => c.send({type:'chat', name: myName, text: chatIn.value}));
+                    addMsg(myName, chatIn.value);
+                    myPos.msg = chatIn.value;
+                    setTimeout(() => { if(myPos.msg === chatIn.value) myPos.msg = ""; }, 3000);
+                }
+                chatIn.value = ""; chatIn.classList.remove('active'); chatIn.blur();
+                typing = false;
+            }
+        }
+    };
+
+    function addMsg(u, t) {
+        const m = document.getElementById('messages');
+        m.innerHTML += `<div><b>${u}:</b> ${t}</div>`;
+        m.scrollTop = 999;
+    }
+
+    const mouse = { x: canvas.width/2, y: canvas.height/2 };
+    window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+
+    function loop() {
+        ctx.fillStyle = 'rgba(0, 5, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        myPos.x += (mouse.x - myPos.x) * 0.05;
+        myPos.y += (mouse.y - myPos.y) * 0.05;
+        conns.forEach(c => c.send({type:'sync', pos: myPos}));
+        players[peer.id] = myPos;
+
+        for(let id in players) {
+            let p = players[id];
+            ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+            ctx.fillStyle = p.color;
+            ctx.strokeStyle = p.color;
+            
+            // DRAW COSMETICS
+            if(p.skin === 'square') ctx.fillRect(p.x-10, p.y-10, 20, 20);
+            if(p.skin === 'circle') { ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 7); ctx.fill(); }
+            if(p.skin === 'ghost') { ctx.strokeRect(p.x-12, p.y-12, 24, 24); }
+            
+            ctx.shadowBlur = 0;
+            ctx.font = "10px monospace"; ctx.textAlign = "center";
+            ctx.fillText(p.name || "GUEST", p.x, p.y + 25);
+            if(p.msg) ctx.fillText(p.msg, p.x, p.y - 25);
+        }
+        requestAnimationFrame(loop);
+    }
+    loop();
+</script>
+</body>
+</html>
