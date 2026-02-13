@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LOBBY_VIBE_FIXED</title>
+    <title>LOBBY_SILENCE_ADMIN</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #050510; --accent: #a78bfa; --panel: rgba(20, 20, 40, 0.85); }
+        :root { --bg: #050510; --accent: #a78bfa; --admin: #fbbf24; --panel: rgba(20, 20, 40, 0.85); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
         
         #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; }
@@ -14,60 +14,71 @@
         #ui { position: absolute; inset: 0; pointer-events: none; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
         .box { pointer-events: all; background: var(--panel); border: 1px solid rgba(167, 139, 250, 0.3); padding: 15px; border-radius: 12px; }
         
-        button { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #chat-input { position: fixed; bottom: 100px; left: 25px; width: 300px; display: none; background: #000; border: 1px solid var(--accent); color: #fff; padding: 12px; }
+        button { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        #chat-input { position: fixed; bottom: 100px; left: 25px; width: 300px; display: none; background: #000; border: 1px solid var(--accent); color: #fff; padding: 12px; border-radius: 8px; }
         #chat-input.active { display: block; }
-        #messages { height: 150px; overflow-y: auto; font-size: 0.9rem; margin-bottom: 10px; }
+        #messages { height: 150px; overflow-y: auto; font-size: 0.9rem; margin-bottom: 10px; scrollbar-width: none; }
         canvas { display: block; }
+        input { background: #000; color: #fff; border: 1px solid var(--accent); padding: 10px; border-radius: 5px; width: 200px; text-align: center; }
+        .admin-input { border-color: var(--admin); margin-top: 10px; font-size: 0.7rem; opacity: 0.6; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
     <div class="login-box">
-        <h1 style="color:var(--accent)">VIBE WORLD</h1>
-        <input type="text" id="username-input" placeholder="NAME..." style="padding:10px; border-radius:5px; border:none;"><br><br>
-        <button onclick="login()">SYNC</button>
+        <h1 style="color:var(--accent); margin-bottom: 20px;">VIBE WORLD</h1>
+        <input type="text" id="username-input" placeholder="ENTER NAME..." maxlength="12"><br>
+        <input type="password" id="admin-input" class="admin-input" placeholder="ACCESS CODE (OPTIONAL)"><br>
+        <button onclick="login()">SYNC SOUL</button>
     </div>
 </div>
-
-<audio id="radio" loop crossorigin="anonymous">
-    <source src="https://stream.zeno.fm/f3v5u8p74eruv" type="audio/mpeg">
-</audio>
 
 <canvas id="canvas"></canvas>
 
 <div id="ui" style="display:none">
     <div style="display: flex; justify-content: space-between;">
-        <div class="box">USER: <b id="display-name" style="color:var(--accent)">---</b></div>
-        <div class="box"><button id="music-btn" onclick="playMusic()">🎵 START LOFI</button></div>
+        <div class="box">USER: <b id="display-name" style="color:var(--accent)">---</b> <span id="admin-tag" style="color:var(--admin); display:none; font-size:0.7rem;">[ADMIN]</span></div>
+        <div class="box" style="font-size: 0.8rem; color: var(--accent);">GLOBAL_LOBBY_01</div>
     </div>
     <div class="box" style="width: 330px;">
         <div id="messages"></div>
-        <input type="text" id="chat-input">
-        <div style="font-size: 0.7rem; opacity: 0.5;">ENTER TO CHAT</div>
+        <input type="text" id="chat-input" placeholder="TYPE...">
+        <div style="font-size: 0.7rem; opacity: 0.5; margin-top: 5px;">[ENTER] TO CHAT</div>
     </div>
 </div>
 
 <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const radio = document.getElementById('radio');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
     let stars = [];
     for(let i=0; i<200; i++) {
-        stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*2, speed: Math.random()*0.5 });
+        stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*2, speed: Math.random()*0.4 + 0.1 });
     }
 
     let myName = "";
+    let isAdmin = false;
     let peer = new Peer(); 
     let conns = [];
     let players = {};
-    let myPos = { x: canvas.width/2, y: canvas.height/2, color: '#a78bfa', name: "", msg: "" };
+    let myPos = { x: canvas.width/2, y: canvas.height/2, color: '#a78bfa', name: "", msg: "", admin: false };
 
     function login() {
-        myName = document.getElementById('username-input').value || "Guest";
+        const val = document.getElementById('username-input').value;
+        const code = document.getElementById('admin-input').value;
+        
+        if(!val) return;
+        
+        myName = val;
+        if(code === "BIB1") {
+            isAdmin = true;
+            myPos.admin = true;
+            myPos.color = "#fbbf24"; // Gold for Admin
+            document.getElementById('admin-tag').style.display = 'inline';
+        }
+        
         myPos.name = myName;
         document.getElementById('display-name').innerText = myName;
         document.getElementById('login-overlay').style.display = 'none';
@@ -76,7 +87,7 @@
     }
 
     function initNetwork() {
-        const LOBBY_ID = "lit-global-vibe-999";
+        const LOBBY_ID = "lit-global-silent-vibe-2026";
         const master = new Peer(LOBBY_ID);
         master.on('open', () => { master.on('connection', c => { conns.push(c); setupC(c); }); });
         master.on('error', () => {
@@ -91,18 +102,8 @@
     function setupC(c) {
         c.on('data', d => {
             if(d.type === 'sync') players[c.peer || "host"] = d.pos;
-            if(d.type === 'chat') addMsg(d.name, d.text);
+            if(d.type === 'chat') addMsg(d.name, d.text, d.admin);
         });
-    }
-
-    function playMusic() {
-        if(radio.paused) {
-            radio.play().catch(() => alert("Click page first!"));
-            document.getElementById('music-btn').innerText = "🎶 VIBING...";
-        } else {
-            radio.pause();
-            document.getElementById('music-btn').innerText = "🎵 START LOFI";
-        }
     }
 
     const chatIn = document.getElementById('chat-input');
@@ -112,10 +113,10 @@
             if(!typing) { typing = true; chatIn.classList.add('active'); chatIn.focus(); }
             else {
                 if(chatIn.value.trim()) {
-                    conns.forEach(c => c.send({type:'chat', name: myName, text: chatIn.value}));
-                    addMsg(myName, chatIn.value);
+                    conns.forEach(c => c.send({type:'chat', name: myName, text: chatIn.value, admin: isAdmin}));
+                    addMsg(myName, chatIn.value, isAdmin);
                     myPos.msg = chatIn.value;
-                    setTimeout(() => { if(myPos.msg === chatIn.value) myPos.msg = ""; }, 3000);
+                    setTimeout(() => { if(myPos.msg === chatIn.value) myPos.msg = ""; }, 4000);
                 }
                 chatIn.value = ""; chatIn.classList.remove('active'); chatIn.blur();
                 typing = false;
@@ -123,9 +124,11 @@
         }
     };
 
-    function addMsg(u, t) {
-        document.getElementById('messages').innerHTML += `<div><b>${u}:</b> ${t}</div>`;
-        document.getElementById('messages').scrollTop = 999;
+    function addMsg(u, t, adm) {
+        const m = document.getElementById('messages');
+        const color = adm ? "var(--admin)" : "var(--accent)";
+        m.innerHTML += `<div><b style="color:${color}">${u}:</b> ${t}</div>`;
+        m.scrollTop = 999;
     }
 
     const mouse = { x: canvas.width/2, y: canvas.height/2 };
@@ -135,13 +138,14 @@
         ctx.fillStyle = "#050510";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // MOVING STARS
         ctx.fillStyle = "#fff";
         stars.forEach(s => {
             s.y += s.speed;
             if(s.y > canvas.height) s.y = 0;
+            ctx.globalAlpha = 0.5;
             ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, 7); ctx.fill();
         });
+        ctx.globalAlpha = 1;
 
         myPos.x += (mouse.x - myPos.x) * 0.05;
         myPos.y += (mouse.y - myPos.y) * 0.05;
@@ -151,12 +155,25 @@
         for(let id in players) {
             let p = players[id];
             ctx.fillStyle = p.color;
-            ctx.shadowBlur = 15; ctx.shadowColor = p.color;
+            ctx.shadowBlur = p.admin ? 25 : 15; 
+            ctx.shadowColor = p.color;
+            
             ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill();
+            
+            // ADMIN CROWN EFFECT
+            if(p.admin) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "14px Arial";
+                ctx.fillText("👑", p.x, p.y - 18);
+            }
+
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
             ctx.fillText(p.name, p.x, p.y + 30);
-            if(p.msg) ctx.fillText(p.msg, p.x, p.y - 30);
+            if(p.msg) {
+                ctx.fillStyle = "rgba(255,255,255,0.8)";
+                ctx.fillText(p.msg, p.x, p.y - 35);
+            }
         }
         requestAnimationFrame(loop);
     }
