@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LoFi Lobby v2</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root { --bg: #0b0e14; --accent: #7c3aed; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        #interface { position: absolute; inset: 0; pointer-events: none; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
+        .panel { pointer-events: all; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-radius: 12px; border: 1px solid #1e293b; padding: 15px; }
+        #music-btn { border: none; color: white; cursor: pointer; font-weight: bold; padding: 10px 20px; transition: 0.3s; }
+        #music-btn.playing { background: var(--accent); box-shadow: 0 0 15px var(--accent); }
+        #chat-input { background: #000; border: 1px solid #334155; color: #fff; padding: 10px; width: 100%; border-radius: 8px; opacity: 0; }
+        #chat-input.active { opacity: 1; }
+        #messages { height: 120px; overflow-y: auto; margin-bottom: 5px; font-size: 0.9rem; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<div id="youtube-player"></div>
+<canvas id="canvas"></canvas>
+
+<div id="interface">
+    <div style="display:flex; justify-content:space-between">
+        <div class="panel">
+            LOBBY ID: <b id="my-id" style="color:var(--accent)">...</b><br>
+            <input type="text" id="join-id" placeholder="Enter Lobby ID" style="margin-top:5px">
+            <button onclick="joinWorld()">JOIN</button>
+        </div>
+        <button id="music-btn" class="panel" onclick="toggleMusic()">🎵 Play LoFi</button>
+    </div>
+
+    <div class="panel" style="width: 300px;">
+        <div id="messages"></div>
+        <input type="text" id="chat-input" placeholder="Type message...">
+        <div style="font-size:0.7rem; color:#64748b; margin-top:5px">ENTER: Open Chat / Send</div>
+    </div>
+</div>
+
+<script>
+    // 1. YouTube Setup
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    let player;
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: '3Fh84gr4bRo', 
+            playerVars: { 'autoplay': 0, 'controls': 0 },
+            events: { 'onReady': () => console.log("Audio Ready") }
+        });
+    }
+
+    function toggleMusic() {
+        if (player.getPlayerState() === 1) {
+            player.pauseVideo();
+            document.getElementById('music-btn').classList.remove('playing');
+        } else {
+            player.playVideo();
+            document.getElementById('music-btn').classList.add('playing');
+        }
+    }
+
+    // 2. Multiplayer Setup
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+    let peer = new Peer();
+    let conns = [];
+    let players = {};
+    let myPos = { x: canvas.width/2, y: canvas.height/2, color: `hsl(${Math.random()*360}, 60%, 60%)`, msg: "" };
+
+    peer.on('open', id => { document.getElementById('my-id').innerText = id; });
+    peer.on('connection', c => { conns.push(c); setupC(c); });
+
+    function joinWorld() {
+        const c = peer.connect(document.getElementById('join-id').value);
+        conns.push(c); setupC(c);
+    }
+
+    function setupC(c) {
+        c.on('data', d => {
+            if(d.type === 'sync') players[c.peer] = d.pos;
+            if(d.type === 'chat') addMsg(c.peer.substring(0,4), d.text);
+        });
+    }
+
+    // 3. Chat Logic
+    const chatInput = document.getElementById('chat-input');
+    let isTyping = false;
+    window.onkeydown = e => {
+        if(e.key === 'Enter') {
+            if(!isTyping) {
+                isTyping = true; chatInput.classList.add('active'); chatInput.focus();
+            } else {
+                if(chatInput.value.trim()) {
+                    conns.forEach(c => c.send({type:'chat', text: chatInput.value}));
+                    addMsg("Me", chatInput.value);
+                    myPos.msg = chatInput.value;
+                    setTimeout(() => { if(myPos.msg === chatInput.value) myPos.msg = ""; }, 3000);
+                }
+                chatInput.value = ""; chatInput.classList.remove('active'); chatInput.blur();
+                isTyping = false;
+            }
+        }
+    };
+
+    function addMsg(u, t) {
+        const m = document.getElementById('messages');
+        m.innerHTML += `<div><b>${u}:</b> ${t}</div>`;
+        m.scrollTop = 999;
+    }
+
+    // 4. Loop
+    const mouse = { x: 0, y: 0 };
+    window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+
+    function loop() {
+        ctx.fillStyle = 'rgba(11, 14, 20, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        myPos.x += (mouse.x - myPos.x) * 0.05;
+        myPos.y += (mouse.y - myPos.y) * 0.05;
+        conns.forEach(c => c.send({type:'sync', pos: myPos}));
+        players[peer.id] = myPos;
+
+        for(let id in players) {
+            let p = players[id];
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 15; ctx.shadowColor = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill();
+            if(p.msg) {
+                ctx.fillStyle = "#fff"; ctx.font = "14px Arial"; ctx.textAlign = "center";
+                ctx.fillText(p.msg, p.x, p.y - 25);
+            }
+        }
+        requestAnimationFrame(loop);
+    }
+    loop();
+</script>
+</body>
+</html>
