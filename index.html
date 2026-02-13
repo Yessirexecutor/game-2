@@ -2,45 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIBE WORLD | GLOBAL LOBBY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VIBE WORLD | MOBILE</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #050510; --accent: #a78bfa; --admin: #fbbf24; --panel: rgba(20, 20, 40, 0.85); }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+        :root { --bg: #050510; --accent: #a78bfa; --admin: #fbbf24; --panel: rgba(20, 20, 40, 0.9); }
+        * { box-sizing: border-box; touch-action: none; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
         
-        /* Login UI */
-        #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: opacity 0.5s; }
-        .login-box { background: var(--panel); border: 2px solid var(--accent); padding: 40px; text-align: center; border-radius: 15px; backdrop-filter: blur(15px); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+        #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .login-box { background: var(--panel); border: 2px solid var(--accent); padding: 30px; text-align: center; border-radius: 20px; width: 90%; max-width: 400px; backdrop-filter: blur(10px); }
         
-        /* HUD */
-        #ui { position: absolute; inset: 0; pointer-events: none; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
-        .box { pointer-events: all; background: var(--panel); border: 1px solid rgba(167, 139, 250, 0.3); padding: 15px; border-radius: 12px; backdrop-filter: blur(5px); }
+        #ui { position: absolute; inset: 0; pointer-events: none; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
+        .box { pointer-events: all; background: var(--panel); border: 1px solid rgba(167, 139, 250, 0.3); padding: 12px; border-radius: 12px; }
         
-        /* Chat */
-        #chat-input { position: fixed; bottom: 100px; left: 25px; width: 320px; display: none; background: #000; border: 1px solid var(--accent); color: #fff; padding: 12px; border-radius: 8px; outline: none; }
+        #chat-container { position: fixed; bottom: 20px; left: 15px; width: calc(100% - 30px); max-width: 350px; pointer-events: none; }
+        #messages { height: 120px; overflow-y: auto; font-size: 0.85rem; margin-bottom: 10px; pointer-events: all; scrollbar-width: none; }
+        #chat-input { width: 100%; background: #000; border: 1px solid var(--accent); color: #fff; padding: 12px; border-radius: 8px; display: none; pointer-events: all; }
         #chat-input.active { display: block; }
-        #messages { height: 160px; overflow-y: auto; font-size: 0.9rem; margin-bottom: 10px; scrollbar-width: none; }
         
-        /* Announcement Bar */
-        #announcement { position: fixed; top: -120px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 20px 60px; font-weight: 800; font-size: 1.5rem; border-radius: 0 0 20px 20px; box-shadow: 0 0 30px rgba(251, 191, 36, 0.5); z-index: 1100; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-transform: uppercase; letter-spacing: 2px; pointer-events: none; }
+        #mobile-chat-btn { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 25px; background: var(--accent); border: none; color: white; font-size: 20px; pointer-events: all; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
 
-        canvas { display: block; }
-        button { background: var(--accent); color: #fff; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; transition: 0.2s; }
-        button:hover { filter: brightness(1.2); transform: scale(1.05); }
-        input { background: #000; color: #fff; border: 1px solid var(--accent); padding: 10px; border-radius: 5px; width: 220px; text-align: center; margin-bottom: 10px; }
+        #announcement { position: fixed; top: -150px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 15px 30px; font-weight: 800; width: 90%; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 0 30px rgba(251, 191, 36, 0.5); z-index: 1500; transition: top 0.5s; text-transform: uppercase; }
+
+        canvas { display: block; width: 100%; height: 100%; }
+        input, button { font-size: 16px; } /* Prevents iOS zoom on focus */
+        button { background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
 
-<div id="announcement">ADMIN BROADCAST</div>
+<div id="announcement">BROADCAST</div>
 
 <div id="login-overlay">
     <div class="login-box">
-        <h1 style="color:var(--accent); margin: 0 0 20px 0;">VIBE WORLD</h1>
-        <input type="text" id="username-input" placeholder="USERNAME" maxlength="12"><br>
-        <input type="password" id="admin-input" placeholder="ACCESS CODE" style="font-size: 0.7rem; border-color: #333;"><br>
-        <button onclick="login()">INITIALIZE</button>
+        <h2 style="color:var(--accent); margin-top:0">VIBE WORLD</h2>
+        <input type="text" id="username-input" placeholder="USERNAME" maxlength="12" style="width:100%; margin-bottom:10px; padding:10px; background:#000; color:#fff; border:1px solid #444;"><br>
+        <input type="password" id="admin-input" placeholder="CODE (OPTIONAL)" style="width:100%; margin-bottom:10px; padding:10px; background:#000; color:#fff; border:1px solid #444;"><br>
+        <button onclick="login()">ENTER</button>
     </div>
 </div>
 
@@ -49,20 +48,18 @@
 <div id="ui" style="display:none">
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div class="box">
-            <span style="opacity: 0.5; font-size: 0.7rem;">CONNECTED AS</span><br>
             <b id="display-name" style="color:var(--accent)">---</b> 
-            <span id="admin-tag" style="color:var(--admin); display:none; font-size:0.7rem; margin-left:5px;">[ADMIN]</span>
+            <span id="admin-tag" style="color:var(--admin); display:none; font-size:0.7rem;">[ADMIN]</span>
         </div>
-        <div class="box" style="text-align: right;">
-            <span style="color: var(--accent); font-size: 0.8rem;">GLOBAL_INSTANCE_A</span><br>
-            <small id="peer-count" style="opacity:0.5">VIBING ALONE</small>
-        </div>
+        <div class="box"><small id="peer-count">VIBING...</small></div>
     </div>
-    <div class="box" style="width: 340px;">
+
+    <div id="chat-container">
         <div id="messages"></div>
-        <input type="text" id="chat-input" placeholder="Type something...">
-        <div style="font-size: 0.7rem; opacity: 0.4;">[ENTER] CHAT | ADMIN: /announce, /meteors</div>
+        <input type="text" id="chat-input" placeholder="Message or /command...">
     </div>
+    
+    <button id="mobile-chat-btn" onclick="toggleChat()">💬</button>
 </div>
 
 <script>
@@ -71,54 +68,34 @@
     const announceBar = document.getElementById('announcement');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-    // --- GAME STATE ---
-    let myName = "";
-    let isAdmin = false;
-    let peer = new Peer(); 
-    let conns = [];
-    let players = {};
-    let stars = [];
-    let meteors = [];
+    let myName = "", isAdmin = false, peer = new Peer(), conns = [], players = {};
+    let stars = [], meteors = [], eventActive = null, hue = 0;
+    let targetPos = { x: canvas.width/2, y: canvas.height/2 };
     let myPos = { x: canvas.width/2, y: canvas.height/2, color: '#a78bfa', name: "", msg: "", admin: false };
 
-    // Initialize Stars
-    for(let i=0; i<200; i++) {
-        stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*2, speed: Math.random()*0.3 + 0.1 });
-    }
+    // Stars Initialization
+    for(let i=0; i<150; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*2, speed: Math.random()*0.3 + 0.1 });
 
     function login() {
-        const userVal = document.getElementById('username-input').value;
-        const codeVal = document.getElementById('admin-input').value;
-        if(!userVal) return;
-
-        myName = userVal;
-        if(codeVal === "BIB1") {
-            isAdmin = true;
-            myPos.admin = true;
-            myPos.color = "#fbbf24";
-            document.getElementById('admin-tag').style.display = 'inline';
-        }
-
+        const user = document.getElementById('username-input').value;
+        const code = document.getElementById('admin-input').value;
+        if(!user) return;
+        myName = user;
+        if(code === "BIB1") { isAdmin = true; myPos.admin = true; myPos.color = "#fbbf24"; document.getElementById('admin-tag').style.display = 'inline'; }
         myPos.name = myName;
         document.getElementById('display-name').innerText = myName;
-        document.getElementById('login-overlay').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('ui').style.display = 'flex';
-        }, 500);
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('ui').style.display = 'flex';
         initNetwork();
     }
 
     function initNetwork() {
-        const LOBBY_ID = "massive-vibe-lobby-final-2026";
+        const LOBBY_ID = "massive-vibe-mobile-2026";
         const master = new Peer(LOBBY_ID);
         master.on('open', () => master.on('connection', setupConnection));
         master.on('error', () => {
             const client = new Peer();
-            client.on('open', () => {
-                const c = client.connect(LOBBY_ID);
-                setupConnection(c);
-            });
+            client.on('open', () => setupConnection(client.connect(LOBBY_ID)));
         });
     }
 
@@ -129,59 +106,59 @@
             if(d.type === 'chat') addMsg(d.name, d.text, d.admin);
             if(d.type === 'broadcast') triggerAnnounce(d.text);
             if(d.type === 'event_meteors') triggerMeteorEvent();
+            if(d.type === 'event_nebula') eventActive = 'nebula';
+            if(d.type === 'event_vortex') eventActive = 'vortex';
+            if(d.type === 'event_clear') eventActive = null;
         });
-        document.getElementById('peer-count').innerText = `${conns.length + 1} SOULS VIBING`;
+        document.getElementById('peer-count').innerText = `${conns.length + 1} SOULS`;
     }
 
-    // --- EVENTS ---
-    function triggerAnnounce(txt) {
-        announceBar.innerText = txt;
-        announceBar.style.top = '0px';
-        setTimeout(() => announceBar.style.top = '-120px', 5000);
-    }
+    // Touch & Mouse Input
+    const updateTarget = (e) => {
+        const x = e.touches ? e.touches[0].clientX : e.clientX;
+        const y = e.touches ? e.touches[0].clientY : e.clientY;
+        targetPos.x = x; targetPos.y = y;
+    };
+    window.addEventListener('mousemove', updateTarget);
+    window.addEventListener('touchstart', updateTarget);
+    window.addEventListener('touchmove', updateTarget);
 
-    function triggerMeteorEvent() {
-        for(let i=0; i<30; i++) {
-            setTimeout(() => {
-                meteors.push({
-                    x: Math.random() * canvas.width,
-                    y: -50,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: Math.random() * 15 + 10,
-                    len: Math.random() * 50 + 50
-                });
-            }, i * 300);
-        }
-    }
-
-    // --- CHAT ---
+    // Chat Functions
     const chatIn = document.getElementById('chat-input');
-    let typing = false;
-    window.onkeydown = e => {
-        if(e.key === 'Enter') {
-            if(!typing) { typing = true; chatIn.classList.add('active'); chatIn.focus(); }
-            else {
-                const cmd = chatIn.value.trim();
-                if(cmd) {
-                    if(cmd.startsWith('/announce ') && isAdmin) {
-                        const m = cmd.replace('/announce ', '');
-                        conns.forEach(c => c.send({type:'broadcast', text: m}));
-                        triggerAnnounce(m);
-                    } else if(cmd === '/meteors' && isAdmin) {
-                        conns.forEach(c => c.send({type:'event_meteors'}));
-                        triggerMeteorEvent();
-                    } else {
-                        conns.forEach(c => c.send({type:'chat', name: myName, text: cmd, admin: isAdmin}));
-                        addMsg(myName, cmd, isAdmin);
-                        myPos.msg = cmd;
-                        setTimeout(() => { if(myPos.msg === cmd) myPos.msg = ""; }, 4000);
-                    }
-                }
-                chatIn.value = ""; chatIn.classList.remove('active'); chatIn.blur();
-                typing = false;
+    function toggleChat() {
+        chatIn.classList.toggle('active');
+        if(chatIn.classList.contains('active')) chatIn.focus();
+    }
+
+    window.onkeydown = e => { if(e.key === 'Enter') handleChat(); };
+    function handleChat() {
+        const cmd = chatIn.value.trim();
+        if(cmd) {
+            if(cmd.startsWith('/announce ') && isAdmin) {
+                const m = cmd.replace('/announce ', '');
+                conns.forEach(c => c.send({type:'broadcast', text: m}));
+                triggerAnnounce(m);
+            } else if(cmd === '/meteors' && isAdmin) {
+                conns.forEach(c => c.send({type:'event_meteors'}));
+                triggerMeteorEvent();
+            } else if(cmd === '/nebula' && isAdmin) {
+                conns.forEach(c => c.send({type:'event_nebula'}));
+                eventActive = 'nebula';
+            } else if(cmd === '/vortex' && isAdmin) {
+                conns.forEach(c => c.send({type:'event_vortex'}));
+                eventActive = 'vortex';
+            } else if(cmd === '/clear' && isAdmin) {
+                conns.forEach(c => c.send({type:'event_clear'}));
+                eventActive = null;
+            } else {
+                conns.forEach(c => c.send({type:'chat', name: myName, text: cmd, admin: isAdmin}));
+                addMsg(myName, cmd, isAdmin);
+                myPos.msg = cmd;
+                setTimeout(() => { if(myPos.msg === cmd) myPos.msg = ""; }, 4000);
             }
         }
-    };
+        chatIn.value = ""; chatIn.classList.remove('active'); chatIn.blur();
+    }
 
     function addMsg(u, t, adm) {
         const m = document.getElementById('messages');
@@ -189,49 +166,51 @@
         m.scrollTop = 999;
     }
 
-    // --- LOOP ---
-    const mouse = { x: canvas.width/2, y: canvas.height/2 };
-    window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+    function triggerAnnounce(t) { announceBar.innerText = t; announceBar.style.top = '0px'; setTimeout(()=>announceBar.style.top='-150px', 5000); }
+    
+    function triggerMeteorEvent() {
+        for(let i=0; i<25; i++) setTimeout(() => meteors.push({x: Math.random()*canvas.width, y: -50, vx: (Math.random()-0.5)*8, vy: Math.random()*12+8}), i*400);
+    }
 
     function loop() {
+        // Background & Events
         ctx.fillStyle = "#050510";
+        if(eventActive === 'nebula') {
+            hue = (hue + 1) % 360;
+            let g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+            g.addColorStop(0, `hsla(${hue}, 50%, 10%, 0.2)`); g.addColorStop(1, '#050510');
+            ctx.fillStyle = g;
+            myPos.color = `hsl(${hue}, 100%, 70%)`;
+        }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Stars
+        // Vortex Physics
+        let moveX = targetPos.x, moveY = targetPos.y;
+        if(eventActive === 'vortex') {
+            moveX = (targetPos.x * 0.7) + (canvas.width/2 * 0.3);
+            moveY = (targetPos.y * 0.7) + (canvas.height/2 * 0.3);
+            ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, (Date.now()%1000)/2, 0, 7); ctx.stroke();
+        }
+
+        // Stars & Meteors
         ctx.fillStyle = "#fff";
-        stars.forEach(s => {
-            s.y += s.speed;
-            if(s.y > canvas.height) s.y = 0;
-            ctx.globalAlpha = 0.3;
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, 7); ctx.fill();
-        });
-
-        // Meteors
-        meteors.forEach((m, i) => {
-            m.x += m.vx; m.y += m.vy;
-            ctx.strokeStyle = "rgba(167, 139, 250, 0.4)";
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - m.vx*2, m.y - m.vy*2); ctx.stroke();
-            if(m.y > canvas.height + 100) meteors.splice(i, 1);
-        });
+        stars.forEach(s => { s.y += s.speed; if(s.y > canvas.height) s.y = 0; ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, 7); ctx.fill(); });
+        meteors.forEach((m, i) => { m.x += m.vx; m.y += m.vy; ctx.strokeStyle = "rgba(167, 139, 250, 0.5)"; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x-m.vx, m.y-m.vy); ctx.stroke(); if(m.y > canvas.height+50) meteors.splice(i,1); });
+        
+        // Sync & Draw
         ctx.globalAlpha = 1;
-
-        // Multiplayer Sync
-        myPos.x += (mouse.x - myPos.x) * 0.05;
-        myPos.y += (mouse.y - myPos.y) * 0.05;
+        myPos.x += (moveX - myPos.x) * 0.05; myPos.y += (moveY - myPos.y) * 0.05;
         conns.forEach(c => c.send({type:'sync', pos: myPos}));
         players['me'] = myPos;
 
         for(let id in players) {
             let p = players[id];
-            ctx.shadowBlur = p.admin ? 25 : 15; ctx.shadowColor = p.color;
-            ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill();
-            if(p.admin) { ctx.font = "16px Arial"; ctx.fillText("👑", p.x, p.y - 20); }
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
-            ctx.fillText(p.name, p.x, p.y + 30);
-            if(p.msg) ctx.fillText(p.msg, p.x, p.y - 35);
+            ctx.fillStyle = p.color; ctx.shadowBlur = p.admin ? 20 : 10; ctx.shadowColor = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 7); ctx.fill();
+            if(p.admin) { ctx.font = "14px Arial"; ctx.fillText("👑", p.x, p.y - 15); }
+            ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center";
+            ctx.fillText(p.name, p.x, p.y + 25);
+            if(p.msg) ctx.fillText(p.msg, p.x, p.y - 25);
         }
         requestAnimationFrame(loop);
     }
