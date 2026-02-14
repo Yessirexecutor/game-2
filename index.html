@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VIBE_WORLD_STABLE</title>
+    <title>VIBE_WORLD_STABLE_V2</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #020205; --accent: #8b5cf6; --admin: #f59e0b; --glass: rgba(10, 10, 20, 0.9); }
@@ -15,54 +15,54 @@
         #entry-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .glass-card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 24px; text-align: center; width: 350px; }
         
-        #announcement { position: fixed; top: -120px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 15px 50px; border-radius: 0 0 20px 20px; font-weight: 900; z-index: 3000; transition: 0.5s; text-transform: uppercase; }
+        #announcement { position: fixed; top: -150px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 20px 60px; border-radius: 0 0 20px 20px; font-weight: 900; z-index: 3000; transition: 0.5s; text-transform: uppercase; font-size: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         #cinematic-text { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 50; pointer-events: none; display: none; }
-        input { width: 80%; padding: 12px; margin: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 8px; text-align: center; }
-        button { width: 85%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        input { width: 85%; padding: 12px; margin: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 8px; text-align: center; }
+        button { width: 90%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #msgs { height: 120px; overflow-y:auto; font-size: 13px; scrollbar-width: none; }
     </style>
 </head>
 <body>
 
-<div id="announcement">SYSTEM UPDATE</div>
+<div id="announcement">SYSTEM BROADCAST</div>
 
 <div id="entry-screen">
     <div class="glass-card">
         <h1 style="color:var(--accent); margin:0 0 20px 0;">VIBE WORLD</h1>
-        <input type="text" id="username" placeholder="NAME"><br>
-        <input type="password" id="pass" placeholder="KEY"><br>
+        <input type="text" id="username" placeholder="NAME" id="u">
+        <input type="password" id="pass" placeholder="KEY" id="p">
         <button onclick="init()">WAKE UP</button>
     </div>
 </div>
 
-<div id="cinematic-text">
-    <div id="line" style="font-size: 26px; font-weight: 300; letter-spacing: 1px;"></div>
-</div>
-
+<div id="cinematic-text"><div id="line" style="font-size: 26px; font-weight: 300;"></div></div>
 <canvas id="canvas"></canvas>
 
 <div id="hud">
     <div style="display:flex; justify-content: space-between;">
         <div class="panel"><b id="status">CONNECTING...</b></div>
         <div id="admin-panel" class="panel" style="display:none; color:var(--admin); border-color:var(--admin);">
-            ADMIN: /announce | /story | /shockwave | /clear
+            <b>ADMIN COMMANDS:</b> /announce [msg] | /story | /shockwave | /clear
         </div>
     </div>
     <div class="panel" style="width: 380px;">
-        <div id="msgs" style="height: 120px; overflow-y:auto; font-size:13px; margin-bottom: 5px;"></div>
-        <input type="text" id="chat-input" placeholder="Type a message...">
+        <div id="msgs"></div>
+        <input type="text" id="chat-input" placeholder="Type a message or command...">
     </div>
 </div>
 
 <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const chatInput = document.getElementById('chat-input');
+    const msgBox = document.getElementById('msgs');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
     let myPos = { x: 0, y: 0, name: "", color: "#8b5cf6", adm: false, msg: "" };
     let players = {}, conns = [], stars = [], storyPhase = 0, storyTime = 0, shake = 0, waveR = 0;
     let bigMeteor = { x: 0, y: 0 };
 
-    for(let i=0; i<200; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2 + 0.5});
+    for(let i=0; i<200; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
 
     function init() {
         myPos.name = document.getElementById('username').value || "Guest";
@@ -76,7 +76,7 @@
     }
 
     function startNet() {
-        const ID = "vibe-world-stable-2026";
+        const ID = "vibe-world-final-fix";
         const peer = new Peer(ID);
         peer.on('open', () => { document.getElementById('status').innerText = "ONLINE (HOST)"; });
         peer.on('connection', setup);
@@ -91,6 +91,7 @@
         conns.push(c);
         c.on('data', d => {
             if(d.type === 'sync') players[d.id] = d.p;
+            if(d.type === 'chat') addChat(d.name, d.txt, d.adm);
             if(d.type === 'story') triggerStory();
             if(d.type === 'shock') waveR = 1;
             if(d.type === 'bc') showBC(d.txt);
@@ -98,10 +99,15 @@
         });
     }
 
+    function addChat(n, t, a) {
+        msgBox.innerHTML += `<div><b style="color:${a?'var(--admin)':'var(--accent)'}">${n}</b>: ${t}</div>`;
+        msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
     function showBC(t) {
         const el = document.getElementById('announcement');
         el.innerText = t; el.style.top = "0px";
-        setTimeout(() => { el.style.top = "-120px"; }, 4000);
+        setTimeout(() => { el.style.top = "-150px"; }, 5000);
     }
 
     function triggerStory() {
@@ -123,20 +129,34 @@
     ];
 
     window.onmousemove = e => { myPos.x = e.clientX; myPos.y = e.clientY; };
+
+    // --- RE-RESTORED COMMAND LOGIC ---
     window.onkeydown = e => {
         if(e.key === 'Escape') { resetWorld(); conns.forEach(c => c.send({type:'reset'})); }
         if(e.key === 'Enter') {
-            const inp = document.getElementById('chat-input');
-            const val = inp.value.trim();
-            if(!val) return;
-            if(val === '/story' && myPos.adm) { triggerStory(); conns.forEach(c => c.send({type:'story'})); }
-            else if(val === '/shockwave' && myPos.adm) { waveR = 1; conns.forEach(c => c.send({type:'shock'})); }
-            else if(val.startsWith('/announce ') && myPos.adm) { 
-                let t = val.replace('/announce ', ''); showBC(t); conns.forEach(c => c.send({type:'bc', txt: t}));
+            if (document.activeElement !== chatInput) {
+                chatInput.focus();
+            } else {
+                const val = chatInput.value.trim();
+                if(!val) { chatInput.blur(); return; }
+
+                if(val === '/story' && myPos.adm) { 
+                    triggerStory(); conns.forEach(c => c.send({type:'story'})); 
+                } else if(val === '/shockwave' && myPos.adm) { 
+                    waveR = 1; conns.forEach(c => c.send({type:'shock'})); 
+                } else if(val.startsWith('/announce ') && myPos.adm) { 
+                    let t = val.replace('/announce ', '');
+                    showBC(t); conns.forEach(c => c.send({type:'bc', txt: t}));
+                } else if(val === '/clear' && myPos.adm) { 
+                    resetWorld(); conns.forEach(c => c.send({type:'reset'})); 
+                } else {
+                    addChat(myPos.name, val, myPos.adm);
+                    conns.forEach(c => c.send({type:'chat', name: myPos.name, txt: val, adm: myPos.adm}));
+                    myPos.msg = val; setTimeout(()=>myPos.msg="", 4000);
+                }
+                chatInput.value = "";
+                chatInput.blur();
             }
-            else if(val === '/clear' && myPos.adm) { resetWorld(); conns.forEach(c => c.send({type:'reset'})); }
-            else { myPos.msg = val; setTimeout(()=>myPos.msg="", 4000); }
-            inp.value = "";
         }
     };
 
@@ -161,10 +181,10 @@
                 document.getElementById('line').innerText = script[idx];
                 if(elap > 11000) { storyPhase = 2; storyTime = Date.now(); document.getElementById('cinematic-text').style.display = "none"; }
             } else if(storyPhase === 2) {
-                shake = 20; bigMeteor.x -= 30; bigMeteor.y += 20;
-                let g = ctx.createRadialGradient(bigMeteor.x, bigMeteor.y, 0, bigMeteor.x, bigMeteor.y, 300);
+                shake = 25; bigMeteor.x -= 30; bigMeteor.y += 20;
+                let g = ctx.createRadialGradient(bigMeteor.x, bigMeteor.y, 0, bigMeteor.x, bigMeteor.y, 350);
                 g.addColorStop(0, '#fff'); g.addColorStop(0.2, '#f59e0b'); g.addColorStop(1, 'transparent');
-                ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bigMeteor.x, bigMeteor.y, 300, 0, 7); ctx.fill();
+                ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bigMeteor.x, bigMeteor.y, 350, 0, 7); ctx.fill();
                 if(elap > 3500) { ctx.fillStyle = `rgba(255,255,255,${(elap-3500)/1000})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
                 if(elap > 4500) { storyPhase = 3; storyTime = Date.now(); }
             } else if(storyPhase === 3) {
