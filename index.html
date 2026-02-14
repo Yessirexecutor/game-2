@@ -2,214 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VIBE_WORLD_STABLE_V2</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BETALOPIX | Secure Portal</title>
     <style>
-        :root { --bg: #020205; --accent: #8b5cf6; --admin: #f59e0b; --glass: rgba(10, 10, 20, 0.9); }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        :root { --bg: #050608; --beta-teal: #00f2ff; --lopix-purple: #bd00ff; --glass: rgba(255,255,255,0.05); }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+
+        /* --- AUTH LAYER --- */
+        #auth-layer { position: fixed; inset: 0; z-index: 2000; background: var(--bg); display: flex; justify-content: center; align-items: center; }
+        .portal-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 30px; width: 320px; text-align: center; }
+        .logo-text { font-size: 2.5rem; font-weight: 900; background: linear-gradient(to right, var(--beta-teal), var(--lopix-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
         
-        #hud { position: fixed; inset: 0; pointer-events: none; z-index: 100; display: none; flex-direction: column; justify-content: space-between; padding: 25px; }
-        .panel { pointer-events: all; background: var(--glass); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
-        #chat-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); color: #fff; padding: 12px; border-radius: 10px; outline: none; margin-top: 10px; }
+        input { width: 100%; box-sizing: border-box; background: #000; border: 1px solid #333; padding: 15px; border-radius: 12px; color: white; margin-bottom: 15px; outline: none; }
+        input:focus { border-color: var(--beta-teal); }
         
-        #entry-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; }
-        .glass-card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 24px; text-align: center; width: 350px; }
-        
-        #announcement { position: fixed; top: -150px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 20px 60px; border-radius: 0 0 20px 20px; font-weight: 900; z-index: 3000; transition: 0.5s; text-transform: uppercase; font-size: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        #cinematic-text { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 50; pointer-events: none; display: none; }
-        input { width: 85%; padding: 12px; margin: 10px; background: #000; color: #fff; border: 1px solid #333; border-radius: 8px; text-align: center; }
-        button { width: 90%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #msgs { height: 120px; overflow-y:auto; font-size: 13px; scrollbar-width: none; }
+        .btn-main { width: 100%; padding: 15px; border: none; border-radius: 12px; background: linear-gradient(45deg, var(--beta-teal), var(--lopix-purple)); color: white; font-weight: bold; cursor: pointer; }
+        .mode-toggle { font-size: 0.8rem; color: #888; margin-top: 15px; cursor: pointer; text-decoration: underline; }
+
+        /* --- HOME LAYER --- */
+        #home-layer { display: none; height: 100vh; flex-direction: column; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: rgba(5,6,8,0.9); border-bottom: 1px solid var(--glass); }
+        .dashboard { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .badge { font-size: 0.6rem; padding: 3px 8px; border-radius: 4px; font-weight: bold; margin: 0 5px; }
+        .badge-admin { background: var(--lopix-purple); box-shadow: 0 0 10px var(--lopix-purple); }
+        .badge-og { background: gold; color: black; }
+
+        /* --- GAME LAYER --- */
+        #game-layer { display: none; position: fixed; inset: 0; background: #000; z-index: 500; }
+        .viewport { width: 100%; height: 100%; perspective: 1000px; display: flex; align-items: center; justify-content: center; }
+        .baseplate { width: 2000px; height: 2000px; background: #111; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(65deg); border: 2px solid #222; }
+        .avatar { width: 40px; height: 40px; position: absolute; transform-style: preserve-3d; transition: 0.1s linear; }
+        .cube { width: 40px; height: 40px; background: var(--beta-teal); border: 2px solid white; box-shadow: 0 0 15px var(--beta-teal); }
     </style>
 </head>
 <body>
 
-<div id="announcement">SYSTEM BROADCAST</div>
-
-<div id="entry-screen">
-    <div class="glass-card">
-        <h1 style="color:var(--accent); margin:0 0 20px 0;">VIBE WORLD</h1>
-        <input type="text" id="username" placeholder="NAME" id="u">
-        <input type="password" id="pass" placeholder="KEY" id="p">
-        <button onclick="init()">WAKE UP</button>
-    </div>
-</div>
-
-<div id="cinematic-text"><div id="line" style="font-size: 26px; font-weight: 300;"></div></div>
-<canvas id="canvas"></canvas>
-
-<div id="hud">
-    <div style="display:flex; justify-content: space-between;">
-        <div class="panel"><b id="status">CONNECTING...</b></div>
-        <div id="admin-panel" class="panel" style="display:none; color:var(--admin); border-color:var(--admin);">
-            <b>ADMIN COMMANDS:</b> /announce [msg] | /story | /shockwave | /clear
+    <div id="auth-layer">
+        <div class="portal-card">
+            <div class="logo-text">BETALOPIX</div>
+            <h3 id="auth-mode-title">Architect Login</h3>
+            <input type="text" id="user-in" placeholder="Username">
+            <input type="password" id="pass-in" placeholder="Security Key">
+            <button class="btn-main" id="auth-btn" onclick="handleAuth()">INITIALIZE</button>
+            <div class="mode-toggle" onclick="toggleAuthMode()" id="mode-text">Need an identity? Create Account</div>
         </div>
     </div>
-    <div class="panel" style="width: 380px;">
-        <div id="msgs"></div>
-        <input type="text" id="chat-input" placeholder="Type a message or command...">
+
+    <div id="home-layer">
+        <nav>
+            <div class="logo-text" style="font-size: 1.2rem;">BETALOPIX</div>
+            <div id="nav-user" style="font-weight: bold; color: var(--beta-teal);"></div>
+        </nav>
+        <div class="dashboard">
+            <h1 id="welcome-msg">Welcome</h1>
+            <div id="user-badges" style="margin-bottom: 20px;"></div>
+            <button class="btn-main" style="width: 250px;" onclick="startGame()">ENTER BASEPLATE</button>
+            <p onclick="location.reload()" style="color: red; cursor: pointer; margin-top: 30px;">LOGOUT</p>
+        </div>
     </div>
-</div>
 
-<script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const chatInput = document.getElementById('chat-input');
-    const msgBox = document.getElementById('msgs');
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    <div id="game-layer">
+        <div class="viewport">
+            <div class="baseplate"></div>
+            <div id="player" class="avatar">
+                <div id="player-cube" class="cube"></div>
+                <div id="player-tag" style="position: absolute; top: -40px; width: 120px; left: -40px; text-align: center; font-weight: bold;">User</div>
+            </div>
+        </div>
+    </div>
 
-    let myPos = { x: 0, y: 0, name: "", color: "#8b5cf6", adm: false, msg: "" };
-    let players = {}, conns = [], stars = [], storyPhase = 0, storyTime = 0, shake = 0, waveR = 0;
-    let bigMeteor = { x: 0, y: 0 };
+    <script>
+        let isSignUpMode = false;
+        let db = JSON.parse(localStorage.getItem('bx_global_db') || '[]');
+        let session = null;
 
-    for(let i=0; i<200; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
-
-    function init() {
-        myPos.name = document.getElementById('username').value || "Guest";
-        if(document.getElementById('pass').value === "BIB1") { 
-            myPos.adm = true; myPos.color = "#f59e0b"; 
-            document.getElementById('admin-panel').style.display = "block";
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById('auth-mode-title').innerText = isSignUpMode ? "Create Identity" : "Architect Login";
+            document.getElementById('mode-text').innerText = isSignUpMode ? "Already an Architect? Login" : "Need an identity? Create Account";
+            document.getElementById('auth-btn').innerText = isSignUpMode ? "CREATE & ENTER" : "INITIALIZE";
         }
-        document.getElementById('entry-screen').style.display = "none";
-        document.getElementById('hud').style.display = "flex";
-        startNet();
-    }
 
-    function startNet() {
-        const ID = "vibe-world-final-fix";
-        const peer = new Peer(ID);
-        peer.on('open', () => { document.getElementById('status').innerText = "ONLINE (HOST)"; });
-        peer.on('connection', setup);
-        const guest = new Peer();
-        guest.on('open', () => {
-            const c = guest.connect(ID);
-            c.on('open', () => { setup(c); document.getElementById('status').innerText = "ONLINE"; });
-        });
-    }
+        function handleAuth() {
+            const u = document.getElementById('user-in').value.trim();
+            const p = document.getElementById('pass-in').value;
+            if(!u || !p) return alert("Fill all fields.");
 
-    function setup(c) {
-        conns.push(c);
-        c.on('data', d => {
-            if(d.type === 'sync') players[d.id] = d.p;
-            if(d.type === 'chat') addChat(d.name, d.txt, d.adm);
-            if(d.type === 'story') triggerStory();
-            if(d.type === 'shock') waveR = 1;
-            if(d.type === 'bc') showBC(d.txt);
-            if(d.type === 'reset') resetWorld();
-        });
-    }
+            let user = db.find(x => x.user.toLowerCase() === u.toLowerCase());
 
-    function addChat(n, t, a) {
-        msgBox.innerHTML += `<div><b style="color:${a?'var(--admin)':'var(--accent)'}">${n}</b>: ${t}</div>`;
-        msgBox.scrollTop = msgBox.scrollHeight;
-    }
+            if (isSignUpMode) {
+                // --- SIGN UP LOGIC ---
+                if (user) return alert("⚠️ Identity already exists! Please Login instead.");
+                
+                user = { user: u, pass: p, badges: [] };
+                if (u.toLowerCase() === 'betalopix') user.badges.push("ADMIN", "OG");
+                else if (db.length < 10) user.badges.push("OG");
 
-    function showBC(t) {
-        const el = document.getElementById('announcement');
-        el.innerText = t; el.style.top = "0px";
-        setTimeout(() => { el.style.top = "-150px"; }, 5000);
-    }
-
-    function triggerStory() {
-        storyPhase = 1; storyTime = Date.now();
-        bigMeteor = { x: canvas.width + 600, y: -400 };
-        document.getElementById('cinematic-text').style.display = "block";
-    }
-
-    function resetWorld() {
-        storyPhase = 0; shake = 0; waveR = 0;
-        document.getElementById('cinematic-text').style.display = "none";
-        ctx.setTransform(1,0,0,1,0,0);
-    }
-
-    const script = [
-        "Hey... are you sure this is the right idea?",
-        "Well yeah, it has to be. Shooting the meteor down is the only idea.",
-        "Well... I hope the satellite people are okay..."
-    ];
-
-    window.onmousemove = e => { myPos.x = e.clientX; myPos.y = e.clientY; };
-
-    // --- RE-RESTORED COMMAND LOGIC ---
-    window.onkeydown = e => {
-        if(e.key === 'Escape') { resetWorld(); conns.forEach(c => c.send({type:'reset'})); }
-        if(e.key === 'Enter') {
-            if (document.activeElement !== chatInput) {
-                chatInput.focus();
+                db.push(user);
+                localStorage.setItem('bx_global_db', JSON.stringify(db));
+                alert("Account Created!");
             } else {
-                const val = chatInput.value.trim();
-                if(!val) { chatInput.blur(); return; }
-
-                if(val === '/story' && myPos.adm) { 
-                    triggerStory(); conns.forEach(c => c.send({type:'story'})); 
-                } else if(val === '/shockwave' && myPos.adm) { 
-                    waveR = 1; conns.forEach(c => c.send({type:'shock'})); 
-                } else if(val.startsWith('/announce ') && myPos.adm) { 
-                    let t = val.replace('/announce ', '');
-                    showBC(t); conns.forEach(c => c.send({type:'bc', txt: t}));
-                } else if(val === '/clear' && myPos.adm) { 
-                    resetWorld(); conns.forEach(c => c.send({type:'reset'})); 
-                } else {
-                    addChat(myPos.name, val, myPos.adm);
-                    conns.forEach(c => c.send({type:'chat', name: myPos.name, txt: val, adm: myPos.adm}));
-                    myPos.msg = val; setTimeout(()=>myPos.msg="", 4000);
-                }
-                chatInput.value = "";
-                chatInput.blur();
+                // --- LOGIN LOGIC ---
+                if (!user) return alert("⚠️ Identity not found! Please create an account.");
+                if (user.pass !== p) return alert("⚠️ INCORRECT KEY! Access Denied.");
             }
-        }
-    };
 
-    function loop() {
-        if(shake > 0) { ctx.save(); ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake); }
-        ctx.fillStyle = "#020205"; ctx.fillRect(0,0,canvas.width,canvas.height);
-        
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        stars.forEach(s => { s.y += s.s * 0.3; if(s.y > canvas.height) s.y = 0; ctx.fillRect(s.x, s.y, s.s, s.s); });
-
-        if(waveR > 0) {
-            waveR += 20;
-            ctx.strokeStyle = `rgba(139, 92, 246, ${1 - waveR/canvas.width})`;
-            ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, waveR, 0, 7); ctx.stroke();
-            if(waveR > canvas.width) waveR = 0;
+            // If we get here, Auth is successful
+            session = user;
+            document.getElementById('auth-layer').style.display = 'none';
+            document.getElementById('home-layer').style.display = 'flex';
+            updateUI();
         }
 
-        if(storyPhase > 0) {
-            let elap = Date.now() - storyTime;
-            if(storyPhase === 1) {
-                let idx = elap < 3500 ? 0 : elap < 7500 ? 1 : 2;
-                document.getElementById('line').innerText = script[idx];
-                if(elap > 11000) { storyPhase = 2; storyTime = Date.now(); document.getElementById('cinematic-text').style.display = "none"; }
-            } else if(storyPhase === 2) {
-                shake = 25; bigMeteor.x -= 30; bigMeteor.y += 20;
-                let g = ctx.createRadialGradient(bigMeteor.x, bigMeteor.y, 0, bigMeteor.x, bigMeteor.y, 350);
-                g.addColorStop(0, '#fff'); g.addColorStop(0.2, '#f59e0b'); g.addColorStop(1, 'transparent');
-                ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bigMeteor.x, bigMeteor.y, 350, 0, 7); ctx.fill();
-                if(elap > 3500) { ctx.fillStyle = `rgba(255,255,255,${(elap-3500)/1000})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
-                if(elap > 4500) { storyPhase = 3; storyTime = Date.now(); }
-            } else if(storyPhase === 3) {
-                shake = 0; ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-                ctx.fillStyle = "#fff"; ctx.font = "italic 24px serif"; ctx.textAlign = "center";
-                ctx.fillText("Hey, you. You're finally awake.", canvas.width/2, canvas.height/2);
-                if(elap > 6000) storyPhase = 0;
-            }
+        function updateUI() {
+            document.getElementById('nav-user').innerText = session.user;
+            document.getElementById('welcome-msg').innerText = "Welcome, " + session.user;
+            document.getElementById('user-badges').innerHTML = session.badges.map(b => `<span class="badge badge-${b.toLowerCase()}">${b}</span>`).join('');
         }
 
-        players['me'] = myPos;
-        for(let id in players) {
-            let p = players[id];
-            ctx.shadowBlur = 15; ctx.shadowColor = p.color;
-            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, 7); ctx.fill();
-            ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "600 12px Inter"; ctx.textAlign = "center";
-            ctx.fillText(p.name, p.x, p.y + 28);
-            if(p.msg) ctx.fillText(p.msg, p.x, p.y - 28);
+        function startGame() {
+            document.getElementById('home-layer').style.display = 'none';
+            document.getElementById('game-layer').style.display = 'block';
+            document.getElementById('player-tag').innerText = session.user;
+            if(session.badges.includes("ADMIN")) document.getElementById('player-cube').style.background = "var(--lopix-purple)";
         }
 
-        conns.forEach(c => c.send({type:'sync', id: myPos.name, p: myPos}));
-        if(shake > 0) ctx.restore();
-        requestAnimationFrame(loop);
-    }
-    loop();
-</script>
+        // --- WASD CONTROLS ---
+        let posX = 0, posY = 0;
+        document.addEventListener('keydown', (e) => {
+            if(document.getElementById('game-layer').style.display !== 'block') return;
+            const s = 20;
+            if(e.key.toLowerCase() === 'w') posY -= s;
+            if(e.key.toLowerCase() === 's') posY += s;
+            if(e.key.toLowerCase() === 'a') posX -= s;
+            if(e.key.toLowerCase() === 'd') posX += s;
+            document.getElementById('player').style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+        });
+    </script>
 </body>
 </html>
