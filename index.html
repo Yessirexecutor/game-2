@@ -2,154 +2,128 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BETALOPIX | Secure Portal</title>
+    <title>BETALOPIX | Instant Multiplayer</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #050608; --teal: #00f2ff; --purple: #bd00ff; --glass: rgba(255,255,255,0.05); }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        :root { --bg: #050608; --teal: #00f2ff; --purple: #bd00ff; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* --- LAYER SYSTEM --- */
-        .layer { display: none; height: 100vh; width: 100vw; flex-direction: column; align-items: center; justify-content: center; position: fixed; inset: 0; transition: 0.5s; }
-        .active { display: flex !important; }
+        /* AUTH SCREEN */
+        #auth-layer { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; align-items: center; }
+        .card { background: #111; padding: 40px; border-radius: 20px; border: 1px solid #333; text-align: center; }
+        input { background: #000; border: 1px solid #444; color: white; padding: 12px; margin: 10px; border-radius: 8px; width: 220px; outline: none; }
+        .btn { background: linear-gradient(45deg, var(--teal), var(--purple)); border: none; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-        /* --- AUTH CARD DESIGN --- */
-        .auth-card { background: #111; padding: 40px; border-radius: 24px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; }
-        .logo { font-size: 2.5rem; font-weight: 900; background: linear-gradient(45deg, var(--teal), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+        /* GAME WORLD */
+        #game-layer { display: none; width: 100vw; height: 100vh; perspective: 1000px; background: #000; }
+        .baseplate { width: 4000px; height: 4000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-2000px, -2000px); position: absolute; top: 50%; left: 50%; }
         
-        .auth-toggle { display: flex; background: #000; padding: 5px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #222; }
-        .toggle-btn { flex: 1; padding: 8px; font-size: 0.8rem; cursor: pointer; border-radius: 8px; transition: 0.3s; color: #666; font-weight: bold; }
-        .toggle-btn.selected { background: #222; color: var(--teal); }
-
-        input { width: 100%; padding: 14px; margin: 8px 0; background: #000; border: 1px solid #333; color: white; border-radius: 10px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--teal); box-shadow: 0 0 10px rgba(0, 242, 255, 0.1); }
-        
-        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 10px; background: linear-gradient(45deg, var(--teal), var(--purple)); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-action:hover { transform: translateY(-2px); filter: brightness(1.2); }
-
-        /* --- HOME & GAME STYLES --- */
-        nav { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px 5%; box-sizing: border-box; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass); }
-        .baseplate { width: 3000px; height: 3000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-1500px, -1500px); position: absolute; top: 50%; left: 50%; border: 1px solid #1a1a1a; }
-        .avatar { position: absolute; transition: 0.1s linear; transform-style: preserve-3d; }
+        /* AVATARS */
+        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.1s linear; }
         .cube { width: 40px; height: 40px; background: var(--teal); border: 2px solid white; box-shadow: 0 0 15px var(--teal); }
-        .tag { position: absolute; top: -35px; width: 120px; left: -40px; text-align: center; font-size: 11px; font-weight: bold; }
+        .tag { position: absolute; top: -30px; width: 100px; left: -30px; text-align: center; font-size: 12px; font-weight: bold; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="layer-auth" class="layer active">
-        <div class="auth-card">
-            <div class="logo">BETALOPIX</div>
-            
-            <div class="auth-toggle">
-                <div id="tab-login" class="toggle-btn selected" onclick="setAuthMode('login')">LOGIN</div>
-                <div id="tab-signup" class="toggle-btn" onclick="setAuthMode('signup')">SIGN UP</div>
-            </div>
-
-            <h3 id="auth-title" style="font-size: 0.9rem; margin-bottom: 15px; color: #888;">Welcome Back, Architect</h3>
-            
-            <input type="text" id="u-field" placeholder="Username">
-            <input type="password" id="p-field" placeholder="Security Key">
-            
-            <button class="btn-action" onclick="submitAuth()" id="auth-submit">INITIALIZE LOGIN</button>
-            <p id="auth-msg" style="font-size: 0.7rem; color: #555; margin-top: 15px;">Secure P2P Encrypted Session</p>
+    <div id="auth-layer">
+        <div class="card">
+            <h1 style="margin-top:0;">BETALOPIX</h1>
+            <input type="text" id="u-name" placeholder="Enter Unique Name">
+            <button class="btn" onclick="startLobby()">JOIN LOBBY</button>
+            <p style="font-size: 10px; color: #555; margin-top: 20px;">No keys required. Peer-to-Peer active.</p>
         </div>
     </div>
 
-    <div id="layer-home" class="layer">
-        <nav>
-            <div class="logo" style="font-size: 1.2rem;">BETALOPIX</div>
-            <div id="user-display" style="color: var(--teal); font-weight: bold;">Architect</div>
-        </nav>
-        <h1 id="welcome-header">Ready to Build?</h1>
-        <button class="btn-action" style="width: 250px;" onclick="switchLayer('layer-game')">LAUNCH BASEPLATE</button>
-        <p onclick="location.reload()" style="color: red; cursor: pointer; margin-top: 40px; font-size: 0.8rem;">Log Out</p>
-    </div>
-
-    <div id="layer-game" class="layer" style="background: #000; perspective: 1200px;">
+    <div id="game-layer">
         <div class="baseplate"></div>
-        <div id="world"></div>
-        <div style="position:fixed; bottom:20px; left:20px; font-size:10px; color:#444;">WASD TO MOVE | ESC TO EXIT</div>
+        <div id="players-container"></div>
     </div>
 
     <script>
-        let authMode = 'login';
-        let session = null;
+        let myName = "";
+        let myPeer = null;
         let myPos = { x: 0, y: 0 };
+        let activeConnections = [];
 
-        function setAuthMode(mode) {
-            authMode = mode;
-            document.getElementById('tab-login').classList.toggle('selected', mode === 'login');
-            document.getElementById('tab-signup').classList.toggle('selected', mode === 'signup');
-            document.getElementById('auth-title').innerText = mode === 'login' ? "Welcome Back, Architect" : "Create New Identity";
-            document.getElementById('auth-submit').innerText = mode === 'login' ? "INITIALIZE LOGIN" : "CREATE ACCOUNT";
-        }
+        function startLobby() {
+            myName = document.getElementById('u-name').value.trim();
+            if(!myName) return alert("Enter a name!");
 
-        function submitAuth() {
-            const u = document.getElementById('u-field').value.trim();
-            const p = document.getElementById('p-field').value;
-            if(!u || !p) return alert("Please fill all fields.");
+            // Create a unique Peer ID for this lobby
+            myPeer = new Peer('btlp-lobby-' + myName);
 
-            let db = JSON.parse(localStorage.getItem('bx_db') || '[]');
-            let existingUser = db.find(x => x.user.toLowerCase() === u.toLowerCase());
-
-            if(authMode === 'signup') {
-                if(existingUser) return alert("⚠️ Identity already exists! Use Login.");
+            myPeer.on('open', (id) => {
+                document.getElementById('auth-layer').style.display = 'none';
+                document.getElementById('game-layer').style.display = 'block';
+                spawnAvatar(myName);
                 
-                let newUser = { user: u, pass: p, isAdmin: (u.toLowerCase() === 'betalopix') };
-                db.push(newUser);
-                localStorage.setItem('bx_db', JSON.stringify(db));
-                alert("Account Created! You can now login.");
-                setAuthMode('login');
-            } else {
-                if(!existingUser) return alert("⚠️ Identity not found! Please Sign Up.");
-                if(existingUser.pass !== p) return alert("⚠️ Incorrect Security Key.");
-                
-                // LOGIN SUCCESS
-                session = existingUser;
-                document.getElementById('user-display').innerText = session.user;
-                document.getElementById('welcome-header').innerText = "Welcome, " + session.user;
-                switchLayer('layer-home');
-            }
+                // Listen for others connecting to you
+                myPeer.on('connection', (conn) => {
+                    setupConn(conn);
+                });
+
+                // Auto-connect to everyone else (The "Lobby" part)
+                // Note: In a real lobby, you'd need a list. 
+                // For now, if you want to see someone, type their name in the console or use this 'broadcast' hack:
+                console.log("Tell your friend to join as a different name!");
+            });
+
+            myPeer.on('error', (err) => {
+                if(err.type === 'unavailable-id') alert("Name taken! Choose another.");
+            });
         }
 
-        function switchLayer(id) {
-            document.querySelectorAll('.layer').forEach(l => l.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(id === 'layer-game') spawnPlayer();
+        function setupConn(conn) {
+            conn.on('data', (data) => {
+                updateAvatar(data.name, data.x, data.y);
+            });
+            activeConnections.push(conn);
         }
 
-        function spawnPlayer() {
-            const world = document.getElementById('world');
-            if(document.getElementById('me')) return;
-
+        function spawnAvatar(name) {
             const div = document.createElement('div');
-            div.id = 'me';
+            div.id = 'p-' + name;
             div.className = 'avatar';
-            let color = session.isAdmin ? 'var(--purple)' : 'var(--teal)';
-            
-            div.innerHTML = `<div class="tag">${session.user}</div><div class="cube" style="background:${color}"></div>`;
-            world.appendChild(div);
-            updatePos(0, 0);
+            div.innerHTML = `<div class="tag">${name}</div><div class="cube"></div>`;
+            if(name.toLowerCase() === 'betalopix') div.querySelector('.cube').style.background = 'var(--purple)';
+            document.getElementById('players-container').appendChild(div);
         }
 
-        function updatePos(x, y) {
-            const me = document.getElementById('me');
-            if(me) {
-                me.style.left = `calc(50% + ${x}px)`;
-                me.style.top = `calc(50% + ${y}px)`;
-            }
+        function updateAvatar(name, x, y) {
+            let el = document.getElementById('p-' + name);
+            if(!el) { spawnAvatar(name); el = document.getElementById('p-' + name); }
+            el.style.left = `calc(50% + ${x}px)`;
+            el.style.top = `calc(50% + ${y}px)`;
         }
 
+        // --- CONTROLS & SYNC ---
         document.addEventListener('keydown', (e) => {
-            if(!document.getElementById('layer-game').classList.contains('active')) return;
-            if(e.key === "Escape") switchLayer('layer-home');
+            if(!myPeer) return;
             const s = 20;
-            if(e.key.toLowerCase() === 'w') myPos.y -= s;
-            if(e.key.toLowerCase() === 's') myPos.y += s;
-            if(e.key.toLowerCase() === 'a') myPos.x -= s;
-            if(e.key.toLowerCase() === 'd') myPos.x += s;
-            updatePos(myPos.x, myPos.y);
+            if(e.key === 'w') myPos.y -= s;
+            if(e.key === 's') myPos.y += s;
+            if(e.key === 'a') myPos.x -= s;
+            if(e.key === 'd') myPos.x += s;
+
+            // Move self
+            updateAvatar(myName, myPos.x, myPos.y);
+
+            // Send my position to everyone I'm connected to
+            activeConnections.forEach(conn => {
+                if(conn.open) {
+                    conn.send({ name: myName, x: myPos.x, y: myPos.y });
+                }
+            });
         });
+
+        // TO SEE OTHERS: You have to "Call" them. 
+        // Usage: Connect('FriendName')
+        window.Connect = function(friendName) {
+            const conn = myPeer.connect('btlp-lobby-' + friendName);
+            setupConn(conn);
+            console.log("Attempting to link with " + friendName);
+        };
     </script>
 </body>
 </html>
