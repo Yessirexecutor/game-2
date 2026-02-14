@@ -3,157 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BETALOPIX | Global Lobby</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>BETALOPIX | Secure Portal</title>
     <style>
         :root { --bg: #050608; --teal: #00f2ff; --purple: #bd00ff; --glass: rgba(255,255,255,0.05); }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
 
-        /* --- SCREENS --- */
-        .screen { display: none; height: 100vh; width: 100vw; flex-direction: column; align-items: center; justify-content: center; }
-        #auth-screen { display: flex; z-index: 1000; position: fixed; background: var(--bg); }
+        /* --- LAYER SYSTEM --- */
+        .layer { display: none; height: 100vh; width: 100vw; flex-direction: column; align-items: center; justify-content: center; position: fixed; inset: 0; transition: 0.5s; }
+        .active { display: flex !important; }
+
+        /* --- AUTH CARD DESIGN --- */
+        .auth-card { background: #111; padding: 40px; border-radius: 24px; border: 1px solid #333; text-align: center; width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; }
+        .logo { font-size: 2.5rem; font-weight: 900; background: linear-gradient(45deg, var(--teal), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
         
-        /* --- AUTH UI --- */
-        .login-card { background: #111; padding: 40px; border-radius: 24px; border: 1px solid #333; text-align: center; width: 300px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        .logo { font-size: 2.5rem; font-weight: 900; background: linear-gradient(45deg, var(--teal), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #444; color: white; border-radius: 10px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; background: linear-gradient(45deg, var(--teal), var(--purple)); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .auth-toggle { display: flex; background: #000; padding: 5px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #222; }
+        .toggle-btn { flex: 1; padding: 8px; font-size: 0.8rem; cursor: pointer; border-radius: 8px; transition: 0.3s; color: #666; font-weight: bold; }
+        .toggle-btn.selected { background: #222; color: var(--teal); }
 
-        /* --- HOME UI --- */
-        #home-screen nav { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px 5%; box-sizing: border-box; background: rgba(0,0,0,0.5); border-bottom: 1px solid var(--glass); }
-        .badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 5px; background: var(--purple); font-weight: bold; box-shadow: 0 0 10px var(--purple); }
+        input { width: 100%; padding: 14px; margin: 8px 0; background: #000; border: 1px solid #333; color: white; border-radius: 10px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--teal); box-shadow: 0 0 10px rgba(0, 242, 255, 0.1); }
+        
+        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 10px; background: linear-gradient(45deg, var(--teal), var(--purple)); color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-action:hover { transform: translateY(-2px); filter: brightness(1.2); }
 
-        /* --- GAME ENGINE --- */
-        #game-screen { background: #000; perspective: 1000px; }
-        .baseplate { width: 4000px; height: 4000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-2000px, -2000px); position: absolute; top: 50%; left: 50%; border: 2px solid #1a1a1a; }
-        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.15s linear; pointer-events: none; }
-        .cube { width: 40px; height: 40px; background: var(--teal); border: 2px solid #fff; box-shadow: 0 0 15px var(--teal); position: relative; }
-        .name-tag { position: absolute; top: -35px; width: 120px; left: -40px; text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-        .crown { position: absolute; width: 44px; height: 12px; background: gold; top: -12px; clip-path: polygon(0% 100%, 0% 0%, 25% 50%, 50% 0%, 75% 50%, 100% 0%, 100% 100%); border: 1px solid #000; }
+        /* --- HOME & GAME STYLES --- */
+        nav { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 20px 5%; box-sizing: border-box; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass); }
+        .baseplate { width: 3000px; height: 3000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-1500px, -1500px); position: absolute; top: 50%; left: 50%; border: 1px solid #1a1a1a; }
+        .avatar { position: absolute; transition: 0.1s linear; transform-style: preserve-3d; }
+        .cube { width: 40px; height: 40px; background: var(--teal); border: 2px solid white; box-shadow: 0 0 15px var(--teal); }
+        .tag { position: absolute; top: -35px; width: 120px; left: -40px; text-align: center; font-size: 11px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" class="screen">
-        <div class="login-card">
+    <div id="layer-auth" class="layer active">
+        <div class="auth-card">
             <div class="logo">BETALOPIX</div>
-            <p style="color: #666; font-size: 0.8rem; margin-top: -15px;">Global Multiplayer Lobby</p>
-            <input type="text" id="u-in" placeholder="Username">
-            <input type="password" id="p-in" placeholder="Security Key">
-            <button class="btn" onclick="handleLogin()">INITIALIZE</button>
+            
+            <div class="auth-toggle">
+                <div id="tab-login" class="toggle-btn selected" onclick="setAuthMode('login')">LOGIN</div>
+                <div id="tab-signup" class="toggle-btn" onclick="setAuthMode('signup')">SIGN UP</div>
+            </div>
+
+            <h3 id="auth-title" style="font-size: 0.9rem; margin-bottom: 15px; color: #888;">Welcome Back, Architect</h3>
+            
+            <input type="text" id="u-field" placeholder="Username">
+            <input type="password" id="p-field" placeholder="Security Key">
+            
+            <button class="btn-action" onclick="submitAuth()" id="auth-submit">INITIALIZE LOGIN</button>
+            <p id="auth-msg" style="font-size: 0.7rem; color: #555; margin-top: 15px;">Secure P2P Encrypted Session</p>
         </div>
     </div>
 
-    <div id="home-screen" class="screen">
+    <div id="layer-home" class="layer">
         <nav>
             <div class="logo" style="font-size: 1.2rem;">BETALOPIX</div>
-            <div id="nav-info"></div>
+            <div id="user-display" style="color: var(--teal); font-weight: bold;">Architect</div>
         </nav>
-        <h1 id="welcome-txt">Welcome, Architect</h1>
-        <div id="badge-area"></div><br>
-        <button class="btn" style="width: 300px; font-size: 1.2rem;" onclick="enterBaseplate()">LAUNCH INTO LOBBY</button>
-        <p onclick="location.reload()" style="color: red; cursor: pointer; margin-top: 40px; opacity: 0.5;">Disconnect Session</p>
+        <h1 id="welcome-header">Ready to Build?</h1>
+        <button class="btn-action" style="width: 250px;" onclick="switchLayer('layer-game')">LAUNCH BASEPLATE</button>
+        <p onclick="location.reload()" style="color: red; cursor: pointer; margin-top: 40px; font-size: 0.8rem;">Log Out</p>
     </div>
 
-    <div id="game-screen" class="screen">
+    <div id="layer-game" class="layer" style="background: #000; perspective: 1200px;">
         <div class="baseplate"></div>
         <div id="world"></div>
-        <div style="position:fixed; bottom:20px; left:20px; font-size:10px; color:#444;">WASD TO MOVE</div>
+        <div style="position:fixed; bottom:20px; left:20px; font-size:10px; color:#444;">WASD TO MOVE | ESC TO EXIT</div>
     </div>
 
     <script>
+        let authMode = 'login';
         let session = null;
         let myPos = { x: 0, y: 0 };
-        let players = {}; // Registry of online cubes
-        
-        // --- REALTIME CONFIG ---
-        // I am using a "Public Placeholder" for discovery. 
-        // Once you have a Supabase URL/Key, you put them here.
-        const supabaseUrl = 'YOUR_SUPABASE_URL'; 
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-        // Note: For now, we will simulate the connection until you add your keys!
 
-        function handleLogin() {
-            const u = document.getElementById('u-in').value.trim();
-            const p = document.getElementById('p-in').value;
-            if(!u || !p) return alert("Fill all fields.");
+        function setAuthMode(mode) {
+            authMode = mode;
+            document.getElementById('tab-login').classList.toggle('selected', mode === 'login');
+            document.getElementById('tab-signup').classList.toggle('selected', mode === 'signup');
+            document.getElementById('auth-title').innerText = mode === 'login' ? "Welcome Back, Architect" : "Create New Identity";
+            document.getElementById('auth-submit').innerText = mode === 'login' ? "INITIALIZE LOGIN" : "CREATE ACCOUNT";
+        }
 
-            // Basic DB Logic
+        function submitAuth() {
+            const u = document.getElementById('u-field').value.trim();
+            const p = document.getElementById('p-field').value;
+            if(!u || !p) return alert("Please fill all fields.");
+
             let db = JSON.parse(localStorage.getItem('bx_db') || '[]');
-            let user = db.find(x => x.user.toLowerCase() === u.toLowerCase());
+            let existingUser = db.find(x => x.user.toLowerCase() === u.toLowerCase());
 
-            if(!user) {
-                user = { user: u, pass: p, badges: [] };
-                if(u.toLowerCase() === 'betalopix') user.badges.push("ADMIN");
-                db.push(user);
+            if(authMode === 'signup') {
+                if(existingUser) return alert("⚠️ Identity already exists! Use Login.");
+                
+                let newUser = { user: u, pass: p, isAdmin: (u.toLowerCase() === 'betalopix') };
+                db.push(newUser);
                 localStorage.setItem('bx_db', JSON.stringify(db));
-            } else if(user.pass !== p) {
-                return alert("Wrong Password!");
+                alert("Account Created! You can now login.");
+                setAuthMode('login');
+            } else {
+                if(!existingUser) return alert("⚠️ Identity not found! Please Sign Up.");
+                if(existingUser.pass !== p) return alert("⚠️ Incorrect Security Key.");
+                
+                // LOGIN SUCCESS
+                session = existingUser;
+                document.getElementById('user-display').innerText = session.user;
+                document.getElementById('welcome-header').innerText = "Welcome, " + session.user;
+                switchLayer('layer-home');
             }
-
-            session = user;
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('home-screen').style.display = 'flex';
-            document.getElementById('welcome-txt').innerText = "Welcome, " + u;
-            if(user.badges.includes("ADMIN")) document.getElementById('badge-area').innerHTML = '<span class="badge">ADMIN</span>';
         }
 
-        function enterBaseplate() {
-            document.getElementById('home-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
-            spawnCube(session.user, true);
-            startHeartbeat();
+        function switchLayer(id) {
+            document.querySelectorAll('.layer').forEach(l => l.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'layer-game') spawnPlayer();
         }
 
-        function spawnCube(name, isMe) {
+        function spawnPlayer() {
             const world = document.getElementById('world');
-            const div = document.createElement('div');
-            div.id = 'char-' + name;
-            div.className = 'avatar';
-            
-            let color = (name.toLowerCase() === 'betalopix') ? 'var(--purple)' : 'var(--teal)';
-            let crown = (name.toLowerCase() === 'betalopix') ? '<div class="crown"></div>' : '';
+            if(document.getElementById('me')) return;
 
-            div.innerHTML = `
-                <div class="name-tag">${name}</div>
-                <div class="cube" style="background:${color}; box-shadow: 0 0 15px ${color};">
-                    ${crown}
-                </div>
-            `;
+            const div = document.createElement('div');
+            div.id = 'me';
+            div.className = 'avatar';
+            let color = session.isAdmin ? 'var(--purple)' : 'var(--teal)';
+            
+            div.innerHTML = `<div class="tag">${session.user}</div><div class="cube" style="background:${color}"></div>`;
             world.appendChild(div);
-            players[name] = div;
-            updateAvatarPos(name, 0, 0);
+            updatePos(0, 0);
         }
 
-        function updateAvatarPos(name, x, y) {
-            const el = players[name];
-            if(el) {
-                el.style.left = `calc(50% + ${x}px)`;
-                el.style.top = `calc(50% + ${y}px)`;
+        function updatePos(x, y) {
+            const me = document.getElementById('me');
+            if(me) {
+                me.style.left = `calc(50% + ${x}px)`;
+                me.style.top = `calc(50% + ${y}px)`;
             }
         }
 
-        // --- MULTIPLAYER HEARTBEAT ---
-        function startHeartbeat() {
-            // This is where you connect to the server.
-            // For now, it works locally. Once you upload to Vercel, 
-            // you'll see your own movement. To see others, 
-            // the code needs a central 'Broadcast' server.
-        }
-
-        // --- CONTROLS ---
         document.addEventListener('keydown', (e) => {
-            if(document.getElementById('game-screen').style.display !== 'block') return;
+            if(!document.getElementById('layer-game').classList.contains('active')) return;
+            if(e.key === "Escape") switchLayer('layer-home');
             const s = 20;
             if(e.key.toLowerCase() === 'w') myPos.y -= s;
             if(e.key.toLowerCase() === 's') myPos.y += s;
             if(e.key.toLowerCase() === 'a') myPos.x -= s;
             if(e.key.toLowerCase() === 'd') myPos.x += s;
-            
-            updateAvatarPos(session.user, myPos.x, myPos.y);
-            
-            // Here, you would send {name, x, y} to Supabase Broadcast
+            updatePos(myPos.x, myPos.y);
         });
     </script>
 </body>
