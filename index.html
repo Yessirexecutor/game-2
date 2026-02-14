@@ -2,90 +2,106 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BETALOPIX | Keyless Lobby</title>
+    <title>BETALOPIX | Global Multiverse</title>
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
         :root { --bg: #050608; --teal: #00f2ff; --purple: #bd00ff; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; height: 100vh; }
 
         /* AUTH LAYER */
-        #auth-layer { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; align-items: center; }
-        .card { background: #111; padding: 40px; border-radius: 20px; border: 1px solid #333; text-align: center; }
-        input { background: #000; border: 1px solid #444; color: white; padding: 12px; margin: 10px; border-radius: 8px; width: 220px; }
-        .btn { background: linear-gradient(45deg, var(--teal), var(--purple)); border: none; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #auth-layer { position: fixed; inset: 0; z-index: 2000; background: var(--bg); display: flex; justify-content: center; align-items: center; }
+        .card { background: #111; padding: 40px; border-radius: 20px; border: 1px solid #333; text-align: center; width: 300px; }
+        input { background: #000; border: 1px solid #444; color: white; padding: 12px; margin: 10px; border-radius: 8px; width: 80%; outline: none; }
+        .btn { background: linear-gradient(45deg, var(--teal), var(--purple)); border: none; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 90%; }
 
         /* GAME WORLD */
-        #game-layer { display: none; width: 100vw; height: 100vh; perspective: 1000px; background: #000; }
-        .baseplate { width: 4000px; height: 4000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-2000px, -2000px); position: absolute; top: 50%; left: 50%; }
+        #game-layer { display: none; width: 100vw; height: 100vh; perspective: 1200px; background: #000; }
+        .baseplate { width: 5000px; height: 5000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-2500px, -2500px); position: absolute; top: 50%; left: 50%; }
         
         /* AVATARS */
-        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.2s ease-out; }
+        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.1s linear; pointer-events: none; }
         .cube { width: 40px; height: 40px; background: var(--teal); border: 2px solid white; box-shadow: 0 0 15px var(--teal); }
-        .tag { position: absolute; top: -30px; width: 100px; left: -30px; text-align: center; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .tag { position: absolute; top: -30px; width: 120px; left: -40px; text-align: center; font-size: 11px; font-weight: bold; text-transform: uppercase; color: white; }
         .crown { position: absolute; width: 44px; height: 12px; background: gold; top: -12px; clip-path: polygon(0% 100%, 0% 0%, 25% 50%, 50% 0%, 75% 50%, 100% 0%, 100% 100%); }
+
+        /* CHAT BOX */
+        #chat-container { position: fixed; bottom: 20px; right: 20px; width: 250px; height: 300px; background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 10px; display: flex; flex-direction: column; z-index: 100; }
+        #chat-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; color: #ccc; }
+        #chat-input { background: #111; border: none; border-top: 1px solid #333; color: white; padding: 10px; border-radius: 0 0 10px 10px; outline: none; }
     </style>
 </head>
 <body>
 
     <div id="auth-layer">
         <div class="card">
-            <h1>BETALOPIX</h1>
+            <h1 style="background: linear-gradient(to right, var(--teal), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin:0;">BETALOPIX</h1>
+            <p style="font-size: 12px; color: #666;">GLOBAL MULTIPLAYER V1.0</p>
             <input type="text" id="u-name" placeholder="Architect Name">
-            <button class="btn" onclick="initLobby()">ENTER LOBBY</button>
+            <button class="btn" onclick="initLobby()">INITIALIZE CONNECT</button>
         </div>
     </div>
 
     <div id="game-layer">
         <div class="baseplate"></div>
-        <div id="players-container"></div>
+        <div id="world"></div>
+
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Press Enter to Chat...">
+        </div>
     </div>
 
     <script>
-        // Use a public relay (Zero Setup Required)
+        // Connect to a public relay node
         const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-        const lobby = gun.get('betalopix-v1-lobby');
+        const lobby = gun.get('betalopix-universal-lobby-final');
+        const chat = gun.get('betalopix-universal-chat-final');
         
         let myName = "";
         let myPos = { x: 0, y: 0 };
 
         function initLobby() {
             myName = document.getElementById('u-name').value.trim();
-            if(!myName) return alert("Enter Name");
+            if(!myName) return alert("Identify yourself, Architect.");
 
             document.getElementById('auth-layer').style.display = 'none';
             document.getElementById('game-layer').style.display = 'block';
 
-            // 1. Tell the lobby I'm here
-            lobby.get(myName).put({ x: 0, y: 0, lastSeen: Date.now() });
-
-            // 2. Watch the lobby for ALL players
+            // 1. Position Sync
             lobby.map().on((data, name) => {
                 if(!data) return;
-                // If they haven't moved in 10 seconds, ignore them (simple cleanup)
-                if(Date.now() - data.lastSeen > 10000) return removeAvatar(name);
-                
+                // Auto-cleanup stale players (inactive for 30s)
+                if(Date.now() - data.lastSeen > 30000) return removeAvatar(name);
                 updateAvatar(name, data.x, data.y);
             });
-        }
 
-        function spawnAvatar(name) {
-            const container = document.getElementById('players-container');
-            const div = document.createElement('div');
-            div.id = 'p-' + name;
-            div.className = 'avatar';
-            
-            let isAdm = name.toLowerCase() === 'betalopix';
-            let color = isAdm ? 'var(--purple)' : 'var(--teal)';
-            let crown = isAdm ? '<div class="crown"></div>' : '';
+            // 2. Chat Sync
+            chat.map().on((msg) => {
+                if(!msg) return;
+                const msgDiv = document.createElement('div');
+                msgDiv.innerHTML = `<b style="color:var(--teal)">${msg.who}:</b> ${msg.what}`;
+                const box = document.getElementById('chat-messages');
+                box.appendChild(msgDiv);
+                box.scrollTop = box.scrollHeight;
+            });
 
-            div.innerHTML = `<div class="tag">${name}</div><div class="cube" style="background:${color}">${crown}</div>`;
-            container.appendChild(div);
-            return div;
+            // Update heartbeat
+            setInterval(() => {
+                if(myName) lobby.get(myName).put({ x: myPos.x, y: myPos.y, lastSeen: Date.now() });
+            }, 1000);
         }
 
         function updateAvatar(name, x, y) {
             let el = document.getElementById('p-' + name);
-            if(!el) el = spawnAvatar(name);
+            if(!el) {
+                el = document.createElement('div');
+                el.id = 'p-' + name;
+                el.className = 'avatar';
+                let color = (name.toLowerCase() === 'betalopix') ? 'var(--purple)' : 'var(--teal)';
+                let crown = (name.toLowerCase() === 'betalopix') ? '<div class="crown"></div>' : '';
+                el.innerHTML = `<div class="tag">${name}</div><div class="cube" style="background:${color}">${crown}</div>`;
+                document.getElementById('world').appendChild(el);
+            }
             el.style.left = `calc(50% + ${x}px)`;
             el.style.top = `calc(50% + ${y}px)`;
         }
@@ -95,23 +111,26 @@
             if(el) el.remove();
         }
 
-        // --- CONTROLS ---
+        // MOVEMENT
         document.addEventListener('keydown', (e) => {
-            if(!myName) return;
+            if(!myName || document.activeElement.id === 'chat-input') return;
             const s = 25;
-            if(e.key === 'w') myPos.y -= s;
-            if(e.key === 's') myPos.y += s;
-            if(e.key === 'a') myPos.x -= s;
-            if(e.key === 'd') myPos.x += s;
-
-            // Update the "Global Brain"
+            if(e.key.toLowerCase() === 'w') myPos.y -= s;
+            if(e.key.toLowerCase() === 's') myPos.y += s;
+            if(e.key.toLowerCase() === 'a') myPos.x -= s;
+            if(e.key.toLowerCase() === 'd') myPos.x += s;
             lobby.get(myName).put({ x: myPos.x, y: myPos.y, lastSeen: Date.now() });
         });
 
-        // Cleanup my data when I close the tab
-        window.onbeforeunload = () => {
-            lobby.get(myName).put(null);
-        };
+        // CHAT SEND
+        document.getElementById('chat-input').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') {
+                const val = e.target.value;
+                if(!val) return;
+                chat.set({ who: myName, what: val, when: Date.now() });
+                e.target.value = "";
+            }
+        });
     </script>
 </body>
 </html>
