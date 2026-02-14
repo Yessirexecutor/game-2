@@ -2,29 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VIBE_WORLD_REDUX_FINAL</title>
+    <title>VIBE_WORLD_GOD_MODE</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #020205; --accent: #8b5cf6; --admin: #f59e0b; --glass: rgba(10, 10, 20, 0.85); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
         
-        /* Login Overlay */
         #entry-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s; }
         .glass-card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); padding: 40px; border-radius: 24px; text-align: center; backdrop-filter: blur(20px); width: 350px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         
-        /* HUD */
         #hud { position: absolute; inset: 0; pointer-events: none; padding: 30px; display: none; flex-direction: column; justify-content: space-between; z-index: 10; }
         .panel { pointer-events: all; background: var(--glass); border: 1px solid rgba(255,255,255,0.05); padding: 15px 20px; border-radius: 16px; backdrop-filter: blur(10px); }
         
-        /* Chat */
         #chat-zone { width: 380px; }
         #messages { height: 180px; overflow-y: auto; font-size: 13px; margin-bottom: 12px; scrollbar-width: none; mask-image: linear-gradient(to top, black 80%, transparent); }
-        #chat-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 10px; outline: none; }
+        #chat-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 10px; outline: none; transition: 0.2s; }
         #chat-input:focus { border-color: var(--accent); }
 
-        /* Admin UI */
         #admin-controls { border-color: var(--admin); color: var(--admin); font-size: 11px; font-family: monospace; display: none; }
-
         #announcement { position: fixed; top: -120px; left: 50%; transform: translateX(-50%); background: var(--admin); color: #000; padding: 15px 40px; border-radius: 0 0 20px 20px; font-weight: 900; z-index: 3000; transition: 0.6s cubic-bezier(0.23, 1, 0.32, 1); text-transform: uppercase; }
         
         canvas { display: block; }
@@ -34,14 +29,14 @@
 </head>
 <body>
 
-<div id="announcement">ADMIN NOTIFICATION</div>
+<div id="announcement">SERVER MESSAGE</div>
 
 <div id="entry-screen">
     <div class="glass-card">
         <h1 style="margin:0 0 20px 0; letter-spacing: -1px; color: var(--accent);">VIBE REDUX</h1>
-        <input type="text" id="username" placeholder="DISPLAY NAME" maxlength="15">
+        <input type="text" id="username" placeholder="NAME" maxlength="15">
         <input type="password" id="pass" placeholder="SECURITY KEY">
-        <button onclick="init()">CONNECT</button>
+        <button onclick="init()">ENTER DIMENSION</button>
     </div>
 </div>
 
@@ -50,17 +45,17 @@
 <div id="hud">
     <div style="display: flex; justify-content: space-between;">
         <div class="panel">
-            <small style="opacity:0.4; font-weight:800;">STATUS</small><br>
-            <b id="status-text" style="color:var(--accent)">INITIALIZING...</b>
+            <small style="opacity:0.4; font-weight:800;">LOBBY</small><br>
+            <b id="status-text" style="color:var(--accent)">SYNCING...</b>
         </div>
         <div id="admin-controls" class="panel">
-            <b>ADMIN CONSOLE</b><br>
-            /announce, /meteors, /nebula, /vortex, /shockwave, /clear
+            <b>ENTITY CONTROLS</b><br>
+            /boss, /shockwave, /nebula, /vortex, /meteors, /clear
         </div>
     </div>
     <div id="chat-zone" class="panel">
         <div id="messages"></div>
-        <input type="text" id="chat-input" placeholder="Enter message or command...">
+        <input type="text" id="chat-input" placeholder="Press Enter to talk...">
     </div>
 </div>
 
@@ -71,7 +66,7 @@
 
     let myPos = { x: canvas.width/2, y: canvas.height/2, name: "", color: "#8b5cf6", admin: false, msg: "" };
     let stars = [], meteors = [], players = {}, conns = [], peer = new Peer();
-    let mode = null, isAdmin = false, hue = 0, waveRadius = 0;
+    let mode = null, isAdmin = false, hue = 0, waveRadius = 0, bossActive = false;
 
     for(let i=0; i<250; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, z: Math.random()*2 + 1 });
 
@@ -85,26 +80,17 @@
             document.getElementById('admin-controls').style.display = 'block';
         }
         document.getElementById('entry-screen').style.opacity = '0';
-        setTimeout(() => { 
-            document.getElementById('entry-screen').style.display = 'none'; 
-            document.getElementById('hud').style.display = 'flex';
-        }, 800);
+        setTimeout(() => { document.getElementById('entry-screen').style.display = 'none'; document.getElementById('hud').style.display = 'flex'; }, 800);
         startNet();
     }
 
     function startNet() {
-        const LOBBY = "vibe-final-redux-2026";
+        const LOBBY = "vibe-god-mode-2026";
         const host = new Peer(LOBBY);
-        host.on('open', () => {
-            document.getElementById('status-text').innerText = "HOSTING";
-            host.on('connection', setup);
-        });
+        host.on('open', () => { document.getElementById('status-text').innerText = "GOD-HOST"; host.on('connection', setup); });
         host.on('error', () => {
             const guest = new Peer();
-            guest.on('open', () => {
-                document.getElementById('status-text').innerText = "ONLINE";
-                setup(guest.connect(LOBBY));
-            });
+            guest.on('open', () => { document.getElementById('status-text').innerText = "ONLINE"; setup(guest.connect(LOBBY)); });
         });
     }
 
@@ -117,6 +103,7 @@
             if(d.type === 'mode') mode = d.val;
             if(d.type === 'meteors') triggerMeteors();
             if(d.type === 'shock') waveRadius = 1;
+            if(d.type === 'boss') bossActive = d.val;
         });
     }
 
@@ -133,22 +120,20 @@
 
         if(val.startsWith('/announce ') && isAdmin) {
             const t = val.replace('/announce ', '');
-            conns.forEach(c => c.send({type:'bc', txt: t}));
-            triggerBC(t);
-        } else if(val === '/meteors' && isAdmin) {
-            conns.forEach(c => c.send({type:'meteors'}));
-            triggerMeteors();
+            conns.forEach(c => c.send({type:'bc', txt: t})); triggerBC(t);
+        } else if(val === '/boss' && isAdmin) {
+            bossActive = !bossActive;
+            conns.forEach(c => c.send({type:'boss', val: bossActive}));
+            triggerBC(bossActive ? "THE ENTITY HAS AWAKENED" : "THE ENTITY SLEEPS");
         } else if(val === '/shockwave' && isAdmin) {
-            conns.forEach(c => c.send({type:'shock'}));
-            waveRadius = 1;
-        } else if(['/nebula', '/vortex', '/clear'].includes(val) && isAdmin) {
-            mode = val === '/clear' ? null : val.replace('/', '');
-            conns.forEach(c => c.send({type:'mode', val: mode}));
+            conns.forEach(c => c.send({type:'shock'})); waveRadius = 1;
+        } else if(['/nebula', '/vortex', '/meteors', '/clear'].includes(val) && isAdmin) {
+            if(val === '/meteors') { conns.forEach(c => c.send({type:'meteors'})); triggerMeteors(); }
+            else { mode = val === '/clear' ? null : val.replace('/', ''); conns.forEach(c => c.send({type:'mode', val: mode})); }
         } else {
             conns.forEach(c => c.send({type:'chat', name: myPos.name, text: val, adm: isAdmin}));
             pushMsg(myPos.name, val, isAdmin);
-            myPos.msg = val;
-            setTimeout(() => { if(myPos.msg === val) myPos.msg = ""; }, 4000);
+            myPos.msg = val; setTimeout(() => { if(myPos.msg === val) myPos.msg = ""; }, 4000);
         }
         chatInput.value = ""; chatInput.blur();
     }
@@ -173,30 +158,32 @@
         ctx.fillStyle = "#020205";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // BOSS RENDERING
+        if(bossActive) {
+            let b = isAdmin ? myPos : players[Object.keys(players).find(k => players[k].admin)];
+            if(b) {
+                const pulse = Math.sin(Date.now()/500) * 30;
+                ctx.save(); ctx.globalAlpha = 0.2;
+                let g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 400 + pulse);
+                g.addColorStop(0, b.color); g.addColorStop(1, 'transparent');
+                ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+                ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 100 + pulse, 0, 7); ctx.fill();
+                ctx.restore();
+            }
+        }
+
         if(mode === 'nebula') {
             hue = (hue + 1) % 360;
-            const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
-            g.addColorStop(0, `hsla(${hue}, 50%, 15%, 0.2)`); g.addColorStop(1, 'transparent');
-            ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
             myPos.color = `hsl(${hue}, 70%, 60%)`;
         }
 
         ctx.fillStyle = "#fff";
-        stars.forEach(s => {
-            s.y += s.z * 0.5; if(s.y > canvas.height) s.y = 0;
-            ctx.globalAlpha = s.z / 3; ctx.beginPath(); ctx.arc(s.x, s.y, s.z/2, 0, 7); ctx.fill();
-        });
+        stars.forEach(s => { s.y += s.z * 0.5; if(s.y > canvas.height) s.y = 0; ctx.globalAlpha = s.z / 3; ctx.beginPath(); ctx.arc(s.x, s.y, s.z/2, 0, 7); ctx.fill(); });
 
-        meteors.forEach((m, i) => {
-            m.y += m.v; m.x -= m.v/2;
-            ctx.strokeStyle = "rgba(139, 92, 246, 0.5)"; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x+15, m.y-15); ctx.stroke();
-            if(m.y > canvas.height) meteors.splice(i, 1);
-        });
+        meteors.forEach((m, i) => { m.y += m.v; m.x -= m.v/2; ctx.strokeStyle = "rgba(139, 92, 246, 0.5)"; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x+15, m.y-15); ctx.stroke(); if(m.y > canvas.height) meteors.splice(i, 1); });
 
         if(waveRadius > 0) {
-            waveRadius += 25;
-            ctx.strokeStyle = `rgba(255,255,255,${1 - waveRadius/canvas.width})`;
-            ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, waveRadius, 0, 7); ctx.stroke();
+            waveRadius += 25; ctx.strokeStyle = `rgba(255,255,255,${1 - waveRadius/canvas.width})`; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, waveRadius, 0, 7); ctx.stroke();
             const dx = myPos.x - canvas.width/2, dy = myPos.y - canvas.height/2, d = Math.sqrt(dx*dx + dy*dy);
             if(Math.abs(d - waveRadius) < 40) { myPos.x += (dx/d)*70; myPos.y += (dy/d)*70; }
             if(waveRadius > canvas.width * 1.5) waveRadius = 0;
