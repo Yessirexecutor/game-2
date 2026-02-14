@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BETALOPIX | Instant Multiplayer</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>BETALOPIX | Keyless Lobby</title>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <style>
         :root { --bg: #050608; --teal: #00f2ff; --purple: #bd00ff; }
         body, html { margin: 0; padding: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
 
-        /* AUTH SCREEN */
+        /* AUTH LAYER */
         #auth-layer { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; align-items: center; }
         .card { background: #111; padding: 40px; border-radius: 20px; border: 1px solid #333; text-align: center; }
-        input { background: #000; border: 1px solid #444; color: white; padding: 12px; margin: 10px; border-radius: 8px; width: 220px; outline: none; }
+        input { background: #000; border: 1px solid #444; color: white; padding: 12px; margin: 10px; border-radius: 8px; width: 220px; }
         .btn { background: linear-gradient(45deg, var(--teal), var(--purple)); border: none; color: white; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
         /* GAME WORLD */
@@ -19,19 +19,19 @@
         .baseplate { width: 4000px; height: 4000px; background-image: radial-gradient(#222 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg) translate(-2000px, -2000px); position: absolute; top: 50%; left: 50%; }
         
         /* AVATARS */
-        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.1s linear; }
+        .avatar { position: absolute; transform-style: preserve-3d; transition: 0.2s ease-out; }
         .cube { width: 40px; height: 40px; background: var(--teal); border: 2px solid white; box-shadow: 0 0 15px var(--teal); }
-        .tag { position: absolute; top: -30px; width: 100px; left: -30px; text-align: center; font-size: 12px; font-weight: bold; pointer-events: none; }
+        .tag { position: absolute; top: -30px; width: 100px; left: -30px; text-align: center; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .crown { position: absolute; width: 44px; height: 12px; background: gold; top: -12px; clip-path: polygon(0% 100%, 0% 0%, 25% 50%, 50% 0%, 75% 50%, 100% 0%, 100% 100%); }
     </style>
 </head>
 <body>
 
     <div id="auth-layer">
         <div class="card">
-            <h1 style="margin-top:0;">BETALOPIX</h1>
-            <input type="text" id="u-name" placeholder="Enter Unique Name">
-            <button class="btn" onclick="startLobby()">JOIN LOBBY</button>
-            <p style="font-size: 10px; color: #555; margin-top: 20px;">No keys required. Peer-to-Peer active.</p>
+            <h1>BETALOPIX</h1>
+            <input type="text" id="u-name" placeholder="Architect Name">
+            <button class="btn" onclick="initLobby()">ENTER LOBBY</button>
         </div>
     </div>
 
@@ -41,88 +41,76 @@
     </div>
 
     <script>
+        // Use a public relay (Zero Setup Required)
+        const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+        const lobby = gun.get('betalopix-v1-lobby');
+        
         let myName = "";
-        let myPeer = null;
         let myPos = { x: 0, y: 0 };
-        let activeConnections = [];
 
-        function startLobby() {
+        function initLobby() {
             myName = document.getElementById('u-name').value.trim();
-            if(!myName) return alert("Enter a name!");
+            if(!myName) return alert("Enter Name");
 
-            // Create a unique Peer ID for this lobby
-            myPeer = new Peer('btlp-lobby-' + myName);
+            document.getElementById('auth-layer').style.display = 'none';
+            document.getElementById('game-layer').style.display = 'block';
 
-            myPeer.on('open', (id) => {
-                document.getElementById('auth-layer').style.display = 'none';
-                document.getElementById('game-layer').style.display = 'block';
-                spawnAvatar(myName);
+            // 1. Tell the lobby I'm here
+            lobby.get(myName).put({ x: 0, y: 0, lastSeen: Date.now() });
+
+            // 2. Watch the lobby for ALL players
+            lobby.map().on((data, name) => {
+                if(!data) return;
+                // If they haven't moved in 10 seconds, ignore them (simple cleanup)
+                if(Date.now() - data.lastSeen > 10000) return removeAvatar(name);
                 
-                // Listen for others connecting to you
-                myPeer.on('connection', (conn) => {
-                    setupConn(conn);
-                });
-
-                // Auto-connect to everyone else (The "Lobby" part)
-                // Note: In a real lobby, you'd need a list. 
-                // For now, if you want to see someone, type their name in the console or use this 'broadcast' hack:
-                console.log("Tell your friend to join as a different name!");
+                updateAvatar(name, data.x, data.y);
             });
-
-            myPeer.on('error', (err) => {
-                if(err.type === 'unavailable-id') alert("Name taken! Choose another.");
-            });
-        }
-
-        function setupConn(conn) {
-            conn.on('data', (data) => {
-                updateAvatar(data.name, data.x, data.y);
-            });
-            activeConnections.push(conn);
         }
 
         function spawnAvatar(name) {
+            const container = document.getElementById('players-container');
             const div = document.createElement('div');
             div.id = 'p-' + name;
             div.className = 'avatar';
-            div.innerHTML = `<div class="tag">${name}</div><div class="cube"></div>`;
-            if(name.toLowerCase() === 'betalopix') div.querySelector('.cube').style.background = 'var(--purple)';
-            document.getElementById('players-container').appendChild(div);
+            
+            let isAdm = name.toLowerCase() === 'betalopix';
+            let color = isAdm ? 'var(--purple)' : 'var(--teal)';
+            let crown = isAdm ? '<div class="crown"></div>' : '';
+
+            div.innerHTML = `<div class="tag">${name}</div><div class="cube" style="background:${color}">${crown}</div>`;
+            container.appendChild(div);
+            return div;
         }
 
         function updateAvatar(name, x, y) {
             let el = document.getElementById('p-' + name);
-            if(!el) { spawnAvatar(name); el = document.getElementById('p-' + name); }
+            if(!el) el = spawnAvatar(name);
             el.style.left = `calc(50% + ${x}px)`;
             el.style.top = `calc(50% + ${y}px)`;
         }
 
-        // --- CONTROLS & SYNC ---
+        function removeAvatar(name) {
+            const el = document.getElementById('p-' + name);
+            if(el) el.remove();
+        }
+
+        // --- CONTROLS ---
         document.addEventListener('keydown', (e) => {
-            if(!myPeer) return;
-            const s = 20;
+            if(!myName) return;
+            const s = 25;
             if(e.key === 'w') myPos.y -= s;
             if(e.key === 's') myPos.y += s;
             if(e.key === 'a') myPos.x -= s;
             if(e.key === 'd') myPos.x += s;
 
-            // Move self
-            updateAvatar(myName, myPos.x, myPos.y);
-
-            // Send my position to everyone I'm connected to
-            activeConnections.forEach(conn => {
-                if(conn.open) {
-                    conn.send({ name: myName, x: myPos.x, y: myPos.y });
-                }
-            });
+            // Update the "Global Brain"
+            lobby.get(myName).put({ x: myPos.x, y: myPos.y, lastSeen: Date.now() });
         });
 
-        // TO SEE OTHERS: You have to "Call" them. 
-        // Usage: Connect('FriendName')
-        window.Connect = function(friendName) {
-            const conn = myPeer.connect('btlp-lobby-' + friendName);
-            setupConn(conn);
-            console.log("Attempting to link with " + friendName);
+        // Cleanup my data when I close the tab
+        window.onbeforeunload = () => {
+            lobby.get(myName).put(null);
         };
     </script>
 </body>
